@@ -107,22 +107,43 @@ describe("signup endpoint", () => {
 });
 
 describe("login endpoint", () => {
-  it("should successfully login a user with the correct credentials", async () => {
+  beforeEach(async () => {
+    // Sign up the test user before running the tests
     const testUser = {
       email: "testEmail@hotmail.com",
       password: "StrongPW123!",
       confirmPassword: "StrongPW123!",
     };
-    // sign up test user
-    const response: Response = await supertest(app)
-      .post("/signup")
-      .send(testUser);
+    await supertest(app).post("/signup").send(testUser);
+  });
 
+  it("should successfully login a user with the correct credentials", async () => {
     // login with same credentials
     const loginResponse: Response = await supertest(app)
       .post("/login")
-      .send({ email: testUser.email, password: testUser.password });
+      .send({ email: "testEmail@hotmail.com", password: "StrongPW123!" });
 
     expect(loginResponse.status).toBe(200);
+    expect(loginResponse.body.token).toBeDefined();
+    expect(loginResponse.body.foundUser).toBeDefined();
+  });
+
+  it("should return an error if given the wrong password", async () => {
+    const loginResponse: Response = await supertest(app).post("/login").send({
+      email: "testEmail@hotmail.com",
+      password: "incorrectPW123!",
+    });
+
+    expect(loginResponse.status).toBe(400);
+    expect(loginResponse.body.error).toEqual("incorrect password");
+  });
+
+  it("should give a incorrect email error if email given isn't in database", async () => {
+    const response: Response = await supertest(app)
+      .post("/login")
+      .send({ email: "nonexistentemail@hotmail.com", password: "testPW123!" });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toEqual("incorrect email");
   });
 });

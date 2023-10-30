@@ -3,7 +3,8 @@ import dotenv from "dotenv";
 import cors from "cors";
 import bodyParser from "body-parser";
 
-import userRoutes from "./routes/signupRoute";
+import signupRoute from "./routes/signupRoute";
+import loginRoute from "./routes/loginRoute";
 
 dotenv.config();
 
@@ -18,7 +19,8 @@ app.get("/", (req: Request, res: Response) => {
   res.send("Express + Typescript Server test to see nodemon");
 });
 
-app.use("/signup", userRoutes);
+app.use("/login", loginRoute);
+app.use("/signup", signupRoute);
 
 // export the app prior to starting the server for testing
 export default app;

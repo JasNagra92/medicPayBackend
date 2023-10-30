@@ -48,7 +48,6 @@ const userSchema = new Schema(
         if (!email || !password) {
           throw Error("all fields must be filled");
         }
-
         const user = await this.findOne({ email });
 
         if (!user) {
