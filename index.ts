@@ -5,6 +5,7 @@ import bodyParser from "body-parser";
 
 import signupRoute from "./routes/user";
 import loginRoute from "./routes/loginRoute";
+import getTwoWeekDataRoute from "./routes/scheduleRoute";
 
 dotenv.config();
 
@@ -21,6 +22,7 @@ app.get("/", (req: Request, res: Response) => {
 
 app.use("/login", loginRoute);
 app.use("/signup", signupRoute);
+app.use("/getPayData", getTwoWeekDataRoute);
 
 // export the app prior to starting the server for testing
 export default app;

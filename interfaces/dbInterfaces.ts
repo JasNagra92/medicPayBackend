@@ -5,6 +5,16 @@ export interface IShiftTime {
   minutes: number;
 }
 
+export interface IPlatoonStart {
+  [platoon: string]: number;
+}
+
+export interface IScheduleItem {
+  date: Date;
+  // rotation here with be "Day 1", "Day 2", "Night 1" etc.
+  rotation: string;
+}
+
 export interface IUserDataForDB {
   id: string;
   email: string;
@@ -39,11 +49,12 @@ export interface ITwoWeekPayPeriodForClient {
   getTotalEarnings: () => number;
   getNightHoursWorked: () => number;
   getBaseHoursWorkedInPayPeriod: () => number;
+  getWeekendHoursWorked: () => number;
   getLevellingHours: () => number;
   getAlphaNightTotalEarnings: () => number;
   getNightShiftTotalEarnings: () => number;
   getWeekendTotalEarnings: () => number;
-  payDaysInPayPeriod: ISingleDaysPayDataForClient[];
+  workDaysInPayPeriod: ISingleDaysPayDataForClient[];
 }
 
 export interface IRequestForPayDayData extends Request {
