@@ -21,7 +21,15 @@ describe("getSchedule endpoint", () => {
       userInfo: testUserInfo,
       requestedPayDays: testPayDay,
     });
-    console.log(response.body.data);
+    expect(
+      response.body.data[0].workDaysInPayPeriod[3].shiftStart
+    ).toBeDefined();
     expect(response.status).toBe(200);
+    expect(response.body.data[0]).toHaveProperty("payDay");
+    expect(response.body.data[0]).toHaveProperty("workDaysInPayPeriod");
+    expect(response.body.data[0].workDaysInPayPeriod.length).toEqual(14);
+    expect(
+      response.body.data[0].workDaysInPayPeriod[0].dayTotal.toFixed(2)
+    ).toEqual("517.56");
   });
 });

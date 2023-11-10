@@ -109,6 +109,6 @@ describe("generateSingleDaysDataForClient", () => {
     ).toHaveProperty("baseHoursWorked");
     expect(
       generateSingleDaysDataForClient(userInfoFromRequest, payPeriodSchedule[0])
-    ).toHaveProperty("getDayTotal");
+    ).toHaveProperty("dayTotal");
   });
 });

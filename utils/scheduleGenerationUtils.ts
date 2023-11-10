@@ -167,6 +167,14 @@ export function generateSingleDaysDataForClient(
       ? 0
       : getWeekendPremiumHoursWorked(shiftStart, shiftEnd);
 
+  const baseWageEarnings = baseHoursWorked * parseFloat(userInfo.hourlyWage);
+  const nightEarnings = nightHoursWorked * 2.0;
+  const alphaNightsEarnings = nightHoursWorked * 3.6;
+  const weekendEarnings = weekendHoursWorked * 2.25;
+
+  const dayTotal =
+    baseWageEarnings + alphaNightsEarnings + nightEarnings + weekendEarnings;
+
   return {
     date: day.date,
     rotation: day.rotation,
@@ -175,25 +183,10 @@ export function generateSingleDaysDataForClient(
     baseHoursWorked,
     nightHoursWorked,
     weekendHoursWorked,
-    getBaseWageEarnings() {
-      return this.baseHoursWorked! * parseInt(userInfo.hourlyWage);
-    },
-    getAlphaNightsTotal() {
-      return this.nightHoursWorked! * 3.6;
-    },
-    getNightEarningsTotal() {
-      return this.nightHoursWorked! * 2.0;
-    },
-    getWeekendTotal() {
-      return this.weekendHoursWorked! * 2.25;
-    },
-    getDayTotal() {
-      return (
-        this.getBaseWageEarnings()! +
-        this.getAlphaNightsTotal()! +
-        this.getNightEarningsTotal()! +
-        this.getWeekendTotal()!
-      );
-    },
+    baseWageEarnings,
+    nightEarnings,
+    alphaNightsEarnings,
+    weekendEarnings,
+    dayTotal,
   };
 }

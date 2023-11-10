@@ -34,26 +34,17 @@ export interface ISingleDaysPayDataForClient {
   shiftStart: Date;
   shiftEnd: Date;
   baseHoursWorked: number;
-  getBaseWageEarnings: () => number;
+  baseWageEarnings: number;
   nightHoursWorked: number;
-  getAlphaNightsTotal: () => number;
-  getNightEarningsTotal: () => number;
+  alphaNightsEarnings: number;
+  nightEarnings: number;
   weekendHoursWorked: number;
-  getWeekendTotal: () => number;
-  getDayTotal: () => number;
+  weekendEarnings: number;
+  dayTotal: number;
 }
 
 export interface ITwoWeekPayPeriodForClient {
   payDay: Date;
-  getBaseWageEarnings: () => number;
-  getTotalEarnings: () => number;
-  getNightHoursWorked: () => number;
-  getBaseHoursWorkedInPayPeriod: () => number;
-  getWeekendHoursWorked: () => number;
-  getLevellingHours: () => number;
-  getAlphaNightTotalEarnings: () => number;
-  getNightShiftTotalEarnings: () => number;
-  getWeekendTotalEarnings: () => number;
   workDaysInPayPeriod: ISingleDaysPayDataForClient[];
 }
 
