@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import bodyParser from "body-parser";
 
-import signupRoute from "./routes/signupRoute";
+import signupRoute from "./routes/user";
 import loginRoute from "./routes/loginRoute";
 
 dotenv.config();

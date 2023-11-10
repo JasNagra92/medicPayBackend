@@ -1,4 +1,3 @@
-import * as mongoose from "mongoose";
 import { connectDB, dropDB, dropCollections } from "../../setuptestdb";
 import supertest, { Response } from "supertest";
 import app from "../../index";
