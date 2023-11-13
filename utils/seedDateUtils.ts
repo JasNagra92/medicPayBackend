@@ -22,34 +22,46 @@ const startingRotationIndex: Record<string, number> = {
   D: 4,
 };
 
-export const getPayPeriodFromMonthYearAndPlatoon = (
+export const getPayPeriodFromMonthYearAndPlatoon = async (
   platoon: string,
   month: number,
   year: number
 ) => {
-  let seed = DateTime.fromISO(seedDateFirstPayday);
-  let payPeriodStart = DateTime.fromISO(seedDateFirstPayPeriodStart);
-  let data: Record<string, IScheduleItem[]> = {};
+  try {
+    let seed = DateTime.fromISO(seedDateFirstPayday);
+    let payPeriodStart = DateTime.fromISO(seedDateFirstPayPeriodStart);
+    let data: Record<string, IScheduleItem[]> = {};
 
-  while (seed.year <= year) {
-    const rotationIndex = startingRotationIndex[platoon];
-    let currentPayPeriodData: IScheduleItem[] = [];
-    if (seed.year === year && seed.month === month) {
-      for (let day = 0; day < 14; day++) {
-        const currentDate = payPeriodStart.plus({ days: day }).toISODate();
-        const rotationDay = rotation[(rotationIndex + day) % 8];
+    // Initialize rotation index outside the loop
+    let rotationIndex = startingRotationIndex[platoon];
 
-        currentPayPeriodData.push({
-          date: DateTime.fromISO(currentDate!).toJSDate(),
-          rotation: rotationDay,
-        });
+    while (seed.year <= year) {
+      let currentPayPeriodData: IScheduleItem[] = [];
+
+      if (seed.year === year && seed.month === month) {
+        for (let day = 0; day < 14; day++) {
+          const currentDate = payPeriodStart.plus({ days: day }).toISODate();
+          const rotationDay = rotation[(rotationIndex + day) % rotation.length];
+
+          currentPayPeriodData.push({
+            date: DateTime.fromISO(currentDate!).toJSDate(),
+            rotation: rotationDay,
+          });
+        }
+
+        data[seed.toISODate()!] = currentPayPeriodData;
       }
 
-      data[seed.toISODate()!] = currentPayPeriodData;
+      payPeriodStart = payPeriodStart.plus({ days: 14 });
+      seed = seed.plus({ days: 14 });
+
+      // Increment rotation index outside the loop
+      rotationIndex = (rotationIndex + 14) % rotation.length;
     }
 
-    payPeriodStart = payPeriodStart.plus({ days: 14 });
-    seed = seed.plus({ days: 14 });
+    return data;
+  } catch (error) {
+    console.error("Error in getPayPeriodFromMonthYearAndPlatoon:", error);
+    throw error;
   }
-  return data;
 };

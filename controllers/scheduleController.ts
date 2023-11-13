@@ -4,42 +4,49 @@ import {
   ITwoWeekPayPeriodForClient,
 } from "./../interfaces/dbInterfaces";
 import { DateTime } from "luxon";
-import { Response, Request } from "express";
+import { Response } from "express";
 import { IRequestForPayDayData } from "../interfaces/dbInterfaces";
 import {
   generateSingleDaysDataForClient,
-  getPayPeriodSchedule,
-  getPayPeriodStart,
-  payDaysMap,
   generateWholeStiipShift,
 } from "../utils/scheduleGenerationUtils";
 import { getPayPeriodFromMonthYearAndPlatoon } from "../utils/seedDateUtils";
 
-export const getMonthsPayPeriodData = (
+export const getMonthsPayPeriodData = async (
   req: IRequestForPayDayData,
   res: Response
 ) => {
-  const { userInfo, month, year } = req.body;
-  let responseData: ITwoWeekPayPeriodForClient[] = [];
-  let data = getPayPeriodFromMonthYearAndPlatoon(userInfo.platoon, month, year);
+  try {
+    const { userInfo, month, year } = req.body;
+    let responseData: ITwoWeekPayPeriodForClient[] = [];
 
-  for (const paydayDate in data) {
-    const payPeriodData = data[paydayDate];
-    let workDaysInPayPeriod: ISingleDaysPayDataForClient[] = [];
+    let data = await getPayPeriodFromMonthYearAndPlatoon(
+      userInfo.platoon,
+      month,
+      year
+    );
 
-    for (const dayData of payPeriodData) {
-      workDaysInPayPeriod.push(
-        generateSingleDaysDataForClient(userInfo, dayData)
-      );
+    for (const paydayDate in data) {
+      const payPeriodData = data[paydayDate];
+      let workDaysInPayPeriod: ISingleDaysPayDataForClient[] = [];
+
+      for (const dayData of payPeriodData) {
+        workDaysInPayPeriod.push(
+          generateSingleDaysDataForClient(userInfo, dayData)
+        );
+      }
+
+      responseData.push({
+        payDay: DateTime.fromISO(paydayDate).toJSDate(),
+        workDaysInPayPeriod,
+      });
     }
 
-    responseData.push({
-      payDay: DateTime.fromISO(paydayDate).toJSDate(),
-      workDaysInPayPeriod,
-    });
+    res.status(200).send({ data: responseData });
+  } catch (error) {
+    console.error("Error in getMonthsPayPeriodData:", error);
+    res.status(500).send({ error: "Internal Server Error" });
   }
-
-  res.status(200).send({ data: responseData });
 };
 
 export const getWholeStiipData = (
