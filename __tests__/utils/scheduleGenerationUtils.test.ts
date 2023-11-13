@@ -2,8 +2,14 @@ import {
   getPayPeriodStart,
   getPayPeriodSchedule,
   generateSingleDaysDataForClient,
+  generatePaydaysMap,
+  generateWholeStiipShift,
 } from "../../utils/scheduleGenerationUtils";
-import { IScheduleItem, IUserDataForDB } from "../../interfaces/dbInterfaces";
+import {
+  IScheduleItem,
+  ISingleDaysPayDataForClient,
+  IUserDataForDB,
+} from "../../interfaces/dbInterfaces";
 
 describe("getPayPeriodStart", () => {
   it("function returns Oct 13,2023, when given a pay day date of Nov 3rd, 2023, pay periods always start 21 days before pay day and run for 14 days", () => {
@@ -110,5 +116,38 @@ describe("generateSingleDaysDataForClient", () => {
     expect(
       generateSingleDaysDataForClient(userInfoFromRequest, payPeriodSchedule[0])
     ).toHaveProperty("dayTotal");
+  });
+});
+
+describe("generatePaydaysMap", () => {
+  it("should return a map of the paydays in each month from nov 2023 to dec 2024", () => {
+    let payDays = generatePaydaysMap(new Date(2023, 10, 3), 32);
+
+    expect(payDays).toBeDefined();
+  });
+});
+
+describe("generateWholeStiipShift", () => {
+  it("should return a stiip day with 0 earnings in the ISingleDaysPayData form", () => {
+    let userInfoFromRequest: IUserDataForDB = {
+      id: "test",
+      email: "test",
+      shiftPattern: "Alpha",
+      platoon: "A",
+      dayShiftStartTime: { hours: 6, minutes: 0 },
+      dayShiftEndTime: { hours: 18, minutes: 0 },
+      nightShiftStartTime: { hours: 18, minutes: 0 },
+      nightShiftEndTime: { hours: 6, minutes: 0 },
+      hourlyWage: "43.13",
+    };
+    let date: string = new Date(2023, 10, 3).toISOString();
+    let rotation: string = "Night 1";
+
+    let stiipDayData: ISingleDaysPayDataForClient = generateWholeStiipShift(
+      userInfoFromRequest,
+      date,
+      rotation
+    );
+    expect(stiipDayData.stiipHours).toBeDefined();
   });
 });

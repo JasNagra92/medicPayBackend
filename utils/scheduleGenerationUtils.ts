@@ -1,9 +1,9 @@
+import { IUserDataForDB } from "./../interfaces/dbInterfaces";
 import {
   ISingleDaysPayDataForClient,
   ITwoWeekPayPeriodForClient,
   IPlatoonStart,
   IScheduleItem,
-  IUserDataForDB,
 } from "../interfaces/dbInterfaces";
 import { sub } from "date-fns";
 import {
@@ -167,13 +167,21 @@ export function generateSingleDaysDataForClient(
       ? 0
       : getWeekendPremiumHoursWorked(shiftStart, shiftEnd);
 
-  const baseWageEarnings = baseHoursWorked * parseFloat(userInfo.hourlyWage);
+  const baseWageEarnings =
+    day.rotation === "day off"
+      ? 0
+      : baseHoursWorked * parseFloat(userInfo.hourlyWage);
   const nightEarnings = nightHoursWorked * 2.0;
   const alphaNightsEarnings = nightHoursWorked * 3.6;
   const weekendEarnings = weekendHoursWorked * 2.25;
 
   const dayTotal =
-    baseWageEarnings + alphaNightsEarnings + nightEarnings + weekendEarnings;
+    day.rotation === "day off"
+      ? 0
+      : baseWageEarnings +
+        alphaNightsEarnings +
+        nightEarnings +
+        weekendEarnings;
 
   return {
     date: day.date,
@@ -190,3 +198,71 @@ export function generateSingleDaysDataForClient(
     dayTotal,
   };
 }
+
+// function to generate a daysPayData where the user indicates they stipped the whole day
+export function generateWholeStiipShift(
+  userInfo: IUserDataForDB,
+  date: string,
+  rotation: string
+) {
+  const day = {
+    date: new Date(date),
+    rotation,
+  };
+  const shiftStart = generateStartTimeDate(day, userInfo);
+  const shiftEnd = generateEndTimeDate(day, userInfo);
+
+  const baseHoursWorked = 0;
+  const nightHoursWorked = 0;
+  const weekendHoursWorked = 0;
+
+  const baseWageEarnings = 0;
+  const nightEarnings = 0;
+  const alphaNightsEarnings = 0;
+  const weekendEarnings = 0;
+
+  const stiipHours = getHoursWorked(shiftStart, shiftEnd);
+
+  const dayTotal = 0.75 * parseFloat(userInfo.hourlyWage) * stiipHours;
+
+  return {
+    date: day.date,
+    rotation: day.rotation,
+    shiftStart,
+    shiftEnd,
+    baseHoursWorked,
+    nightHoursWorked,
+    weekendHoursWorked,
+    baseWageEarnings,
+    nightEarnings,
+    alphaNightsEarnings,
+    weekendEarnings,
+    stiipHours,
+    dayTotal,
+  };
+}
+
+// function to generate specified number of paydates starting from provided payday
+export function generatePaydaysMap(
+  firstPayday: Date,
+  numberOfPaydays: number
+): Map<string, Date[]> {
+  const paydaysMap = new Map<string, Date[]>();
+
+  for (let i = 0; i < numberOfPaydays; i++) {
+    const nextPayday = new Date(firstPayday);
+    nextPayday.setDate(nextPayday.getDate() + i * 14); // Incrementing 14 days for each iteration
+
+    const key = `${nextPayday.getMonth()} ${nextPayday.getFullYear()}`;
+
+    if (!paydaysMap.has(key)) {
+      paydaysMap.set(key, []);
+    }
+
+    paydaysMap.get(key)!.push(nextPayday);
+  }
+
+  return paydaysMap;
+}
+
+export const payDaysMap = generatePaydaysMap(new Date(2023, 10, 3), 32);

@@ -9,6 +9,8 @@ import {
   getWeekendPremiumHoursWorked,
 } from "../../utils/hourAndMoneyUtils";
 
+import { IUserDataForDB } from "../../interfaces/dbInterfaces";
+
 const baseRate: number = 43.13;
 const nightShiftPremium: number = 5.6;
 const weekendPremium: number = 2.25;
@@ -91,7 +93,9 @@ describe("getHoursWorked", () => {
 
 describe("generateStartTimeDate", () => {
   it("should return a date object with the correct start time using the info from the userinfo object as well as a schedule item", () => {
-    let userInfoTest: IUserInfo = {
+    let userInfoTest: IUserDataForDB = {
+      id: "test",
+      email: "test@hotmail.com",
       hourlyWage: "",
       shiftPattern: "",
       platoon: "A",
@@ -110,7 +114,9 @@ describe("generateStartTimeDate", () => {
   });
 
   it("should return a date object with the correct end time using the info from the userinfo object as well as a schedule item when its a night shift", () => {
-    let userInfoTest: IUserInfo = {
+    let userInfoTest: IUserDataForDB = {
+      id: "test",
+      email: "test@hotmail.com",
       hourlyWage: "",
       shiftPattern: "",
       platoon: "A",
@@ -131,7 +137,9 @@ describe("generateStartTimeDate", () => {
 
 describe("generateEndTimeDate", () => {
   it("should return a date object with the correct end time using the info from the userinfo object as well as a schedule item when its a day shift", () => {
-    let userInfoTest: IUserInfo = {
+    let userInfoTest: IUserDataForDB = {
+      id: "test",
+      email: "test@hotmail.com",
       hourlyWage: "",
       shiftPattern: "",
       platoon: "A",
@@ -149,7 +157,9 @@ describe("generateEndTimeDate", () => {
     expect(result).toEqual(expectedDate);
   });
   it("should return a date object with the correct end time using the info from the userinfo object as well as a schedule item when its a night shift, should be the next day ", () => {
-    let userInfoTest: IUserInfo = {
+    let userInfoTest: IUserDataForDB = {
+      id: "test",
+      email: "test@hotmail.com",
       hourlyWage: "",
       shiftPattern: "",
       platoon: "A",

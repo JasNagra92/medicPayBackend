@@ -41,6 +41,7 @@ export interface ISingleDaysPayDataForClient {
   weekendHoursWorked: number;
   weekendEarnings: number;
   dayTotal: number;
+  stiipHours?: number;
 }
 
 export interface ITwoWeekPayPeriodForClient {
@@ -51,6 +52,14 @@ export interface ITwoWeekPayPeriodForClient {
 export interface IRequestForPayDayData extends Request {
   body: {
     userInfo: IUserDataForDB;
-    requestedPayDays: string[];
+    monthAndYear: string;
+  };
+}
+
+export interface IRequestForWholeStiip {
+  body: {
+    userInfo: IUserDataForDB;
+    date: string;
+    rotation: string;
   };
 }
