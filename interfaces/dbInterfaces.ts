@@ -1,4 +1,5 @@
 import { Request } from "express";
+import { DateTime } from "luxon";
 
 export interface IShiftTime {
   hours: number;
@@ -52,7 +53,8 @@ export interface ITwoWeekPayPeriodForClient {
 export interface IRequestForPayDayData extends Request {
   body: {
     userInfo: IUserDataForDB;
-    monthAndYear: string;
+    month: number;
+    year: number;
   };
 }
 

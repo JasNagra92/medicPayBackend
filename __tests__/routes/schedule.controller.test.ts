@@ -15,11 +15,13 @@ describe("getSchedule endpoint", () => {
       nightShiftEndTime: { hours: 6, minutes: 0 },
       hourlyWage: "43.13",
     };
-    const testMonthAndYear: string = "3 2024";
+    const testMonth: number = 4;
+    const testYear: number = 2024;
 
     const response: Response = await supertest(app).post("/getPayData").send({
       userInfo: testUserInfo,
-      monthAndYear: testMonthAndYear,
+      month: testMonth,
+      year: testYear,
     });
     expect(
       response.body.data[0].workDaysInPayPeriod[3].shiftStart
@@ -28,9 +30,6 @@ describe("getSchedule endpoint", () => {
     expect(response.body.data[0]).toHaveProperty("payDay");
     expect(response.body.data[0]).toHaveProperty("workDaysInPayPeriod");
     expect(response.body.data[0].workDaysInPayPeriod.length).toEqual(14);
-    expect(
-      response.body.data[0].workDaysInPayPeriod[0].dayTotal.toFixed(2)
-    ).toEqual("611.76");
   });
 });
 

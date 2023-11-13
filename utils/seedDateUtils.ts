@@ -1,4 +1,5 @@
 import { DateTime } from "luxon";
+import { IScheduleItem } from "../interfaces/dbInterfaces";
 const rotation = [
   "Day 1",
   "Day 2",
@@ -21,22 +22,27 @@ const startingRotationIndex: Record<string, number> = {
   D: 4,
 };
 
-export const getPayPeriodFromYearAndPlatoon = (
+export const getPayPeriodFromMonthYearAndPlatoon = (
   platoon: string,
+  month: number,
   year: number
 ) => {
   let seed = DateTime.fromISO(seedDateFirstPayday);
   let payPeriodStart = DateTime.fromISO(seedDateFirstPayPeriodStart);
-  let data: Record<string, Record<string, number>> = {};
+  let data: Record<string, IScheduleItem[]> = {};
 
   while (seed.year <= year) {
     const rotationIndex = startingRotationIndex[platoon];
-    let currentPayPeriodData: Record<string, number> = {};
-    if (seed.year === year) {
+    let currentPayPeriodData: IScheduleItem[] = [];
+    if (seed.year === year && seed.month === month) {
       for (let day = 0; day < 14; day++) {
         const currentDate = payPeriodStart.plus({ days: day }).toISODate();
         const rotationDay = rotation[(rotationIndex + day) % 8];
-        currentPayPeriodData[currentDate] = rotationDay;
+
+        currentPayPeriodData.push({
+          date: DateTime.fromISO(currentDate!).toJSDate(),
+          rotation: rotationDay,
+        });
       }
 
       data[seed.toISODate()!] = currentPayPeriodData;
@@ -45,9 +51,5 @@ export const getPayPeriodFromYearAndPlatoon = (
     payPeriodStart = payPeriodStart.plus({ days: 14 });
     seed = seed.plus({ days: 14 });
   }
-
-  console.log(data);
+  return data;
 };
-
-// Example usage
-getPayPeriodFromYearAndPlatoon("A", 2024);

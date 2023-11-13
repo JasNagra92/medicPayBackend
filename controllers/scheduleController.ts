@@ -3,6 +3,7 @@ import {
   ISingleDaysPayDataForClient,
   ITwoWeekPayPeriodForClient,
 } from "./../interfaces/dbInterfaces";
+import { DateTime } from "luxon";
 import { Response, Request } from "express";
 import { IRequestForPayDayData } from "../interfaces/dbInterfaces";
 import {
@@ -12,33 +13,31 @@ import {
   payDaysMap,
   generateWholeStiipShift,
 } from "../utils/scheduleGenerationUtils";
+import { getPayPeriodFromMonthYearAndPlatoon } from "../utils/seedDateUtils";
 
-export const getTwoWeekPayPeriodData = (
+export const getMonthsPayPeriodData = (
   req: IRequestForPayDayData,
   res: Response
 ) => {
-  const { userInfo, monthAndYear } = req.body;
+  const { userInfo, month, year } = req.body;
   let responseData: ITwoWeekPayPeriodForClient[] = [];
-  let requestedPayDays = payDaysMap.get(monthAndYear);
+  let data = getPayPeriodFromMonthYearAndPlatoon(userInfo.platoon, month, year);
 
-  requestedPayDays!.forEach((payDay) => {
+  for (const paydayDate in data) {
+    const payPeriodData = data[paydayDate];
     let workDaysInPayPeriod: ISingleDaysPayDataForClient[] = [];
-    let payPeriodStart = getPayPeriodStart(payDay);
-    let payPeriodSchedule = getPayPeriodSchedule(
-      payPeriodStart,
-      userInfo.platoon
-    );
 
-    payPeriodSchedule.forEach((workDay) => {
+    for (const dayData of payPeriodData) {
       workDaysInPayPeriod.push(
-        generateSingleDaysDataForClient(userInfo, workDay)
+        generateSingleDaysDataForClient(userInfo, dayData)
       );
-    });
+    }
+
     responseData.push({
-      payDay: payDay,
+      payDay: DateTime.fromISO(paydayDate).toJSDate(),
       workDaysInPayPeriod,
     });
-  });
+  }
 
   res.status(200).send({ data: responseData });
 };
