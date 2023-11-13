@@ -1,5 +1,7 @@
 import {
+  IRequestForSinglePayDayData,
   IRequestForWholeStiip,
+  IRequestForPartialStiip,
   ISingleDaysPayDataForClient,
   ITwoWeekPayPeriodForClient,
 } from "./../interfaces/dbInterfaces";
@@ -9,10 +11,11 @@ import { IRequestForPayDayData } from "../interfaces/dbInterfaces";
 import {
   generateSingleDaysDataForClient,
   generateWholeStiipShift,
+  generatePartialStiipDaysDataForClient,
 } from "../utils/scheduleGenerationUtils";
 import { getPayPeriodFromMonthYearAndPlatoon } from "../utils/seedDateUtils";
 
-export const getMonthsPayPeriodData = async (
+export const getMonthsPayPeriodData = (
   req: IRequestForPayDayData,
   res: Response
 ) => {
@@ -20,7 +23,7 @@ export const getMonthsPayPeriodData = async (
     const { userInfo, month, year } = req.body;
     let responseData: ITwoWeekPayPeriodForClient[] = [];
 
-    let data = await getPayPeriodFromMonthYearAndPlatoon(
+    let data = getPayPeriodFromMonthYearAndPlatoon(
       userInfo.platoon,
       month,
       year
@@ -57,4 +60,44 @@ export const getWholeStiipData = (
   const singleDayWholeStiip = generateWholeStiipShift(userInfo, date, rotation);
 
   res.status(200).send({ data: singleDayWholeStiip });
+};
+
+export const getPartialStiipData = (
+  req: IRequestForPartialStiip,
+  res: Response
+) => {
+  const {
+    userInfo,
+    date,
+    rotation,
+    shiftStart,
+    updatedShiftEnd,
+    originalShiftEnd,
+  } = req.body;
+
+  let day = {
+    date,
+    rotation,
+  };
+  const dayWithParitalStiip = generatePartialStiipDaysDataForClient(
+    userInfo,
+    day,
+    shiftStart,
+    updatedShiftEnd,
+    originalShiftEnd
+  );
+
+  res.status(200).send({ data: dayWithParitalStiip });
+};
+
+export const getSingleDaysWorkData = (
+  req: IRequestForSinglePayDayData,
+  res: Response
+) => {
+  const { userInfo, date, rotation } = req.body;
+  const singleDaysPayData = generateSingleDaysDataForClient(userInfo, {
+    date: new Date(date),
+    rotation,
+  });
+  res.status(200).send({ data: singleDaysPayData });
 };

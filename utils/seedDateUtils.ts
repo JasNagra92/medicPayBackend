@@ -22,7 +22,7 @@ const startingRotationIndex: Record<string, number> = {
   D: 4,
 };
 
-export const getPayPeriodFromMonthYearAndPlatoon = async (
+export const getPayPeriodFromMonthYearAndPlatoon = (
   platoon: string,
   month: number,
   year: number
@@ -32,12 +32,13 @@ export const getPayPeriodFromMonthYearAndPlatoon = async (
     let payPeriodStart = DateTime.fromISO(seedDateFirstPayPeriodStart);
     let data: Record<string, IScheduleItem[]> = {};
 
-    // Initialize rotation index outside the loop
+    // Initialize rotation index outside the loop based on the platoon
     let rotationIndex = startingRotationIndex[platoon];
-
+    // run from 2023 onwards to whatever year is input by the user
     while (seed.year <= year) {
       let currentPayPeriodData: IScheduleItem[] = [];
 
+      //   once the loop gets to the desired month and year start storing data
       if (seed.year === year && seed.month === month) {
         for (let day = 0; day < 14; day++) {
           const currentDate = payPeriodStart.plus({ days: day }).toISODate();
@@ -52,6 +53,7 @@ export const getPayPeriodFromMonthYearAndPlatoon = async (
         data[seed.toISODate()!] = currentPayPeriodData;
       }
 
+      //   increment all the counters by 14
       payPeriodStart = payPeriodStart.plus({ days: 14 });
       seed = seed.plus({ days: 14 });
 

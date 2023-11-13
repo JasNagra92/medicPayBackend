@@ -58,10 +58,29 @@ export interface IRequestForPayDayData extends Request {
   };
 }
 
+export interface IRequestForSinglePayDayData extends Request {
+  body: {
+    userInfo: IUserDataForDB;
+    date: string;
+    rotation: string;
+  };
+}
+
 export interface IRequestForWholeStiip {
   body: {
     userInfo: IUserDataForDB;
     date: string;
     rotation: string;
+  };
+}
+
+export interface IRequestForPartialStiip {
+  body: {
+    userInfo: IUserDataForDB;
+    date: Date;
+    rotation: string;
+    shiftStart: Date;
+    originalShiftEnd: Date;
+    updatedShiftEnd: Date;
   };
 }
