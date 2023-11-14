@@ -71,16 +71,22 @@ export interface IRequestForWholeStiip {
     userInfo: IUserDataForDB;
     date: string;
     rotation: string;
+    // payDay, index, and wholeShift will be used for db queries
+    payDay?: string;
+    index?: number;
+    wholeShift?: true;
   };
 }
 
 export interface IRequestForPartialStiip {
   body: {
     userInfo: IUserDataForDB;
-    date: Date;
+    date: string;
     rotation: string;
     shiftStart: Date;
     originalShiftEnd: Date;
     updatedShiftEnd: Date;
+    payDay: string;
+    index: number;
   };
 }

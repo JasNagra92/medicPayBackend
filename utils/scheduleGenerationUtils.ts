@@ -10,7 +10,6 @@ import {
   getNightShiftPremiumHoursWorked,
   getWeekendPremiumHoursWorked,
 } from "./hourAndMoneyUtils";
-import { format } from "date-fns";
 
 // this function will loop through the pay period schedule, and create the singleDays work data for the client
 export function generatePartialStiipDaysDataForClient(
@@ -38,7 +37,6 @@ export function generatePartialStiipDaysDataForClient(
   const nightEarnings = nightHoursWorked * 2.0;
   const alphaNightsEarnings = nightHoursWorked * 3.6;
   const weekendEarnings = weekendHoursWorked * 2.25;
-
   const stiipHours =
     (originalShiftEndForStiip.getTime() - shiftEndForStiip.getTime()) /
     (1000 * 60 * 60);
