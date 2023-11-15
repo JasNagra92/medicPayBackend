@@ -63,10 +63,13 @@ export interface IRequestForSinglePayDayData extends Request {
     userInfo: IUserDataForDB;
     date: string;
     rotation: string;
+    // optional properties sent with requests to delete singleDaysPayData from database when user deselects stiip or overtime
+    collectionInDB?: string;
+    monthAndYear?: string;
   };
 }
 
-export interface IRequestForWholeStiip {
+export interface IRequestForWholeStiip extends Request {
   body: {
     userInfo: IUserDataForDB;
     date: string;
@@ -78,7 +81,7 @@ export interface IRequestForWholeStiip {
   };
 }
 
-export interface IRequestForPartialStiip {
+export interface IRequestForPartialStiip extends Request {
   body: {
     userInfo: IUserDataForDB;
     date: string;

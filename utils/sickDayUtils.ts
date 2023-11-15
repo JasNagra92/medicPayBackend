@@ -34,6 +34,7 @@ export const updateSickDaysInPayPeriod = async (
       const payPeriodToUpdate = responseData.find(
         (period) => format(period.payDay, "PP") === doc.data().payDay
       );
+      // payDay is stored as ISO string when saving data to databse from client, in tests it is stored differently
 
       // only generate whole stiip shift data if document returned had the wholeShift boolean set to true
       if (doc.data().wholeShift) {
@@ -42,7 +43,6 @@ export const updateSickDaysInPayPeriod = async (
           doc.id,
           doc.data().rotation
         );
-
         if (payPeriodToUpdate) {
           payPeriodToUpdate.workDaysInPayPeriod[doc.data().index] =
             wholeSickDaysWorkData;

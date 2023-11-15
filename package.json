@@ -7,7 +7,8 @@
     "build": "npx tsc",
     "start": "NODE_ENV=development nodemon server.ts",
     "test": "cross-env NODE_ENV='development' jest --runInBand --detectOpenHandles",
-    "dev": "concurrently \"npx tsc --watch\" \"nodemon -q ./dist/server.js\""
+    "dev": "concurrently \"npx tsc --watch\" \"nodemon -q ./dist/server.js\"",
+    "kill": "npx kill-port 4000 8080 8085 4500 4400 4401 4501"
   },
   "jest": {
     "testEnvironment": "node",

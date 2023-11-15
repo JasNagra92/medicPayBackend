@@ -12,6 +12,7 @@ import {
   generateSingleDaysDataForClient,
   generateWholeStiipShift,
   generatePartialStiipDaysDataForClient,
+  generateLateCallShift,
 } from "../utils/scheduleGenerationUtils";
 import {
   addPartialSickDayToDB,
@@ -19,6 +20,8 @@ import {
 } from "../utils/sickDayUtils";
 import { getPayPeriodFromMonthYearAndPlatoon } from "../utils/seedDateUtils";
 import { addWholeSickDayToDB } from "../utils/sickDayUtils";
+import { addLateCallToDB } from "../utils/overtimeUtils";
+import { removeDayFromDB } from "../utils/databaseUtils";
 
 export const getMonthsPayPeriodData = async (
   req: IRequestForPayDayData,
@@ -85,7 +88,6 @@ export const getWholeStiipData = async (
       date
     );
   }
-
   res.status(200).send({ data: singleDayWholeStiip });
 };
 
@@ -120,6 +122,7 @@ export const getPartialStiipData = async (
     month: "long",
     year: "numeric",
   });
+
   await addPartialSickDayToDB(
     userInfo,
     index,
@@ -135,14 +138,70 @@ export const getPartialStiipData = async (
   res.status(200).send({ data: dayWithParitalStiip });
 };
 
-export const getSingleDaysWorkData = (
+export const getSingleDaysWorkData = async (
   req: IRequestForSinglePayDayData,
   res: Response
 ) => {
-  const { userInfo, date, rotation } = req.body;
+  const { userInfo, date, rotation, collectionInDB, monthAndYear } = req.body;
   const singleDaysPayData = generateSingleDaysDataForClient(userInfo, {
     date: new Date(date),
     rotation,
   });
+  // if request was sent with a collection and monthAndYear property, use those along with the userUUID to delete the document matching the date also sent with req.body
+  if (collectionInDB && monthAndYear) {
+    await removeDayFromDB(
+      userInfo,
+      collectionInDB,
+      monthAndYear,
+      new Date(date)
+    );
+  }
   res.status(200).send({ data: singleDaysPayData });
+};
+
+export const getLateCallData = async (
+  req: IRequestForPartialStiip,
+  res: Response
+) => {
+  const {
+    userInfo,
+    index,
+    date,
+    rotation,
+    payDay,
+    shiftStart,
+    updatedShiftEnd,
+    originalShiftEnd,
+  } = req.body;
+
+  let day = {
+    date: new Date(date),
+    rotation,
+  };
+  const dayWithLateCall = generateLateCallShift(
+    userInfo,
+    day,
+    shiftStart,
+    updatedShiftEnd,
+    originalShiftEnd
+  );
+
+  const monthAndYear = new Date(payDay).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+
+  await addLateCallToDB(
+    userInfo,
+    index,
+    rotation,
+    monthAndYear,
+    payDay,
+    date,
+    shiftStart,
+    updatedShiftEnd,
+    originalShiftEnd
+  );
+
+  res.status(200).send({ data: dayWithLateCall });
 };

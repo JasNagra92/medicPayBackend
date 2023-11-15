@@ -1,5 +1,6 @@
 import express, { Router } from "express";
 import {
+  getLateCallData,
   getMonthsPayPeriodData,
   getPartialStiipData,
   getSingleDaysWorkData,
@@ -12,5 +13,6 @@ router.post("/", getMonthsPayPeriodData);
 router.post("/getDefaultDay", getSingleDaysWorkData);
 router.post("/addStiip", getWholeStiipData);
 router.post("/addPartialStiip", getPartialStiipData);
+router.post("/addOvertime", getLateCallData);
 
 export default router;

@@ -156,3 +156,65 @@ export function generateWholeStiipShift(
     dayTotal,
   };
 }
+
+// function to generate a singleDaysPayData with late call overtime attached at 2.0 hourlyWage if the shift is an alpha, BC shifts will need a different calculation because their overtime from 11-12 hours worked is at 1.5x and anything over 12 is double time
+export function generateLateCallShift(
+  userInfo: IUserDataForDB,
+  day: IScheduleItem,
+  shiftStart: Date,
+  updatedShiftEnd: Date,
+  originalShiftEnd: Date
+) {
+  const shiftStartForOT = new Date(shiftStart);
+  const originalShiftEndForOT = new Date(originalShiftEnd);
+  const updatedShiftEndForForOT = new Date(updatedShiftEnd);
+
+  const baseHoursWorked = getHoursWorked(
+    shiftStartForOT,
+    originalShiftEndForOT
+  );
+  const OTHours = getHoursWorked(
+    originalShiftEndForOT,
+    updatedShiftEndForForOT
+  );
+
+  // calculate new premium values accounting for the updated shift end time
+  const nightHoursWorked = getNightShiftPremiumHoursWorked(
+    shiftStartForOT,
+    updatedShiftEndForForOT
+  );
+  const weekendHoursWorked = getWeekendPremiumHoursWorked(
+    shiftStartForOT,
+    updatedShiftEndForForOT
+  );
+
+  const baseWageEarnings = baseHoursWorked * parseFloat(userInfo.hourlyWage);
+  const regularOTEarnings = OTHours * (parseFloat(userInfo.hourlyWage) * 1.5);
+  const nightEarnings = nightHoursWorked * 2.0;
+  const alphaNightsEarnings = nightHoursWorked * 3.6;
+  const weekendEarnings = weekendHoursWorked * 2.25;
+
+  const dayTotal =
+    baseWageEarnings +
+    alphaNightsEarnings +
+    nightEarnings +
+    weekendEarnings +
+    regularOTEarnings;
+
+  return {
+    date: day.date,
+    rotation: day.rotation,
+    shiftStart,
+    shiftEnd: updatedShiftEndForForOT,
+    baseHoursWorked,
+    nightHoursWorked,
+    weekendHoursWorked,
+    baseWageEarnings,
+    nightEarnings,
+    alphaNightsEarnings,
+    weekendEarnings,
+    dayTotal,
+    OTHours,
+    regularOTEarnings,
+  };
+}

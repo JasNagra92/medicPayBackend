@@ -14,7 +14,7 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-if (process.env.NODE_ENV) {
+if (process.env.NODE_ENV === "development") {
   // Configure Firebase DB for Emulator Suite
   connectFirestoreEmulator(db, "127.0.0.1", 8080);
 } else {
