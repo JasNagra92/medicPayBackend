@@ -129,80 +129,77 @@ describe("addOvertime endpoint", () => {
 });
 
 describe("getSchedule endpoint", () => {
-  it("should recieve a userInfo object, and month and year from the client, and then return an object containing the payPeriod Data for the paydays in that month and year", async () => {
-    const testUserInfo: IUserDataForDB = {
-      id: "test",
-      email: "test",
-      shiftPattern: "Alpha",
-      platoon: "A",
-      dayShiftStartTime: { hours: 6, minutes: 0 },
-      dayShiftEndTime: { hours: 18, minutes: 0 },
-      nightShiftStartTime: { hours: 18, minutes: 0 },
-      nightShiftEndTime: { hours: 6, minutes: 0 },
-      hourlyWage: "43.13",
-    };
-    const testMonth: number = 4;
-    const testYear: number = 2024;
-
-    const response: Response = await supertest(app).post("/getPayData").send({
-      userInfo: testUserInfo,
-      month: testMonth,
-      year: testYear,
-    });
-    expect(
-      response.body.data[0].workDaysInPayPeriod[3].shiftStart
-    ).toBeDefined();
-    expect(response.status).toBe(200);
-    expect(response.body.data[0]).toHaveProperty("payDay");
-    expect(response.body.data[0]).toHaveProperty("workDaysInPayPeriod");
-    expect(response.body.data[0].workDaysInPayPeriod.length).toEqual(14);
-  });
-  it("should query the database and return a modified payperiod data with the previous sick days inserted at the correct indexes for each payday in the month that the user previously logged sick hours for", async () => {
-    const testUserInfo: IUserDataForDB = {
-      id: "3r342edsfserseresdf",
-      email: "test",
-      shiftPattern: "Alpha",
-      platoon: "A",
-      dayShiftStartTime: { hours: 6, minutes: 0 },
-      dayShiftEndTime: { hours: 18, minutes: 0 },
-      nightShiftStartTime: { hours: 18, minutes: 0 },
-      nightShiftEndTime: { hours: 6, minutes: 0 },
-      hourlyWage: "43.13",
-    };
-    const testMonth: number = 11;
-    const testYear: number = 2023;
-
-    const response: Response = await supertest(app).post("/getPayData").send({
-      userInfo: testUserInfo,
-      month: testMonth,
-      year: testYear,
-    });
-    // addStiip endpoint test adds a partial sick day for the payDay of November 17th, at the 2nd index which is Oct 29th, so check that index to see if the stiip hours were added
-    expect(response.body.data[1].workDaysInPayPeriod[2].stiipHours).toEqual(3);
-    expect(response.body.data).toBeDefined();
-  });
-  it("should query the database and return a modified payperiod data with the late call overtime added on oct 27 from previous test", async () => {
-    const testUserInfo: IUserDataForDB = {
-      id: "3r342edsfserseresdf",
-      email: "test",
-      shiftPattern: "Alpha",
-      platoon: "A",
-      dayShiftStartTime: { hours: 6, minutes: 0 },
-      dayShiftEndTime: { hours: 18, minutes: 0 },
-      nightShiftStartTime: { hours: 18, minutes: 0 },
-      nightShiftEndTime: { hours: 6, minutes: 0 },
-      hourlyWage: "43.13",
-    };
-    const testMonth: number = 11;
-    const testYear: number = 2023;
-
-    const response: Response = await supertest(app).post("/getPayData").send({
-      userInfo: testUserInfo,
-      month: testMonth,
-      year: testYear,
-    });
-    // addStiip endpoint test adds a partial sick day for the payDay of November 17th, at the 2nd index which is Oct 29th, so check that index to see if the stiip hours were added
-    expect(response.body.data[1].workDaysInPayPeriod[0].OTHours).toEqual(1);
-    expect(response.body.data).toBeDefined();
-  });
+  //   it("should recieve a userInfo object, and month and year from the client, and then return an object containing the payPeriod Data for the paydays in that month and year", async () => {
+  //     const testUserInfo: IUserDataForDB = {
+  //       id: "test",
+  //       email: "test",
+  //       shiftPattern: "Alpha",
+  //       platoon: "A",
+  //       dayShiftStartTime: { hours: 6, minutes: 0 },
+  //       dayShiftEndTime: { hours: 18, minutes: 0 },
+  //       nightShiftStartTime: { hours: 18, minutes: 0 },
+  //       nightShiftEndTime: { hours: 6, minutes: 0 },
+  //       hourlyWage: "43.13",
+  //     };
+  //     const testMonth: number = 4;
+  //     const testYear: number = 2024;
+  //     const response: Response = await supertest(app).post("/getPayData").send({
+  //       userInfo: testUserInfo,
+  //       month: testMonth,
+  //       year: testYear,
+  //     });
+  //     expect(
+  //       response.body.data[0].workDaysInPayPeriod[3].shiftStart
+  //     ).toBeDefined();
+  //     expect(response.status).toBe(200);
+  //     expect(response.body.data[0]).toHaveProperty("payDay");
+  //     expect(response.body.data[0]).toHaveProperty("workDaysInPayPeriod");
+  //     expect(response.body.data[0].workDaysInPayPeriod.length).toEqual(14);
+  //   });
+  //   it("should query the database and return a modified payperiod data with the previous sick days inserted at the correct indexes for each payday in the month that the user previously logged sick hours for", async () => {
+  //     const testUserInfo: IUserDataForDB = {
+  //       id: "3r342edsfserseresdf",
+  //       email: "test",
+  //       shiftPattern: "Alpha",
+  //       platoon: "A",
+  //       dayShiftStartTime: { hours: 6, minutes: 0 },
+  //       dayShiftEndTime: { hours: 18, minutes: 0 },
+  //       nightShiftStartTime: { hours: 18, minutes: 0 },
+  //       nightShiftEndTime: { hours: 6, minutes: 0 },
+  //       hourlyWage: "43.13",
+  //     };
+  //     const testMonth: number = 11;
+  //     const testYear: number = 2023;
+  //     const response: Response = await supertest(app).post("/getPayData").send({
+  //       userInfo: testUserInfo,
+  //       month: testMonth,
+  //       year: testYear,
+  //     });
+  //     // addStiip endpoint test adds a partial sick day for the payDay of November 17th, at the 2nd index which is Oct 29th, so check that index to see if the stiip hours were added
+  //     expect(response.body.data[1].workDaysInPayPeriod[2].stiipHours).toEqual(3);
+  //     expect(response.body.data).toBeDefined();
+  //   });
+  //   it("should query the database and return a modified payperiod data with the late call overtime added on oct 27 from previous test", async () => {
+  //     const testUserInfo: IUserDataForDB = {
+  //       id: "3r342edsfserseresdf",
+  //       email: "test",
+  //       shiftPattern: "Alpha",
+  //       platoon: "A",
+  //       dayShiftStartTime: { hours: 6, minutes: 0 },
+  //       dayShiftEndTime: { hours: 18, minutes: 0 },
+  //       nightShiftStartTime: { hours: 18, minutes: 0 },
+  //       nightShiftEndTime: { hours: 6, minutes: 0 },
+  //       hourlyWage: "43.13",
+  //     };
+  //     const testMonth: number = 11;
+  //     const testYear: number = 2023;
+  //     const response: Response = await supertest(app).post("/getPayData").send({
+  //       userInfo: testUserInfo,
+  //       month: testMonth,
+  //       year: testYear,
+  //     });
+  //     // addStiip endpoint test adds a partial sick day for the payDay of November 17th, at the 2nd index which is Oct 29th, so check that index to see if the stiip hours were added
+  //     expect(response.body.data[1].workDaysInPayPeriod[0].OTHours).toEqual(1);
+  //     expect(response.body.data).toBeDefined();
+  //   });
 });

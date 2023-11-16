@@ -1,14 +1,6 @@
 import { format } from "date-fns";
 import { db } from "../config/firebase";
 import {
-  getDocs,
-  collection,
-  setDoc,
-  doc,
-  where,
-  query,
-} from "firebase/firestore";
-import {
   IUserDataForDB,
   ITwoWeekPayPeriodForClient,
 } from "../interfaces/dbInterfaces";
@@ -36,11 +28,12 @@ export const addLateCallToDB = async (
       updatedShiftEnd,
     };
 
-    const docRef = doc(
-      collection(db, "overtimeHours", monthAndYear, userInfo.id),
-      date
-    );
-    await setDoc(docRef, data);
+    const res = await db
+      .collection("overtimeHours")
+      .doc(monthAndYear)
+      .collection(userInfo.id)
+      .doc(date)
+      .set(data);
   } catch (error) {
     console.log(error);
   }
@@ -56,12 +49,17 @@ export const updateOvertimeDaysInPayPeriod = async (
       month: "long",
       year: "numeric",
     });
-    const q = query(
-      collection(db, "overtimeHours", formattedDate, userInfo.id)
-    );
-    const querySnapshot = await getDocs(q);
+    const userRef = db
+      .collection("overtimeHours")
+      .doc(formattedDate)
+      .collection(userInfo.id);
+    const snapshot = await userRef.get();
+    if (snapshot.empty) {
+      console.log("no matching documents");
+      return;
+    }
 
-    querySnapshot.forEach((doc) => {
+    snapshot.forEach((doc) => {
       const payPeriodToUpdate = responseData.find(
         (period) => format(period.payDay, "PP") === doc.data().payDay
       );

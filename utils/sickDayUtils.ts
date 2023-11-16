@@ -1,14 +1,6 @@
 import { format } from "date-fns";
 import { db } from "../config/firebase";
 import {
-  getDocs,
-  collection,
-  setDoc,
-  doc,
-  where,
-  query,
-} from "firebase/firestore";
-import {
   generatePartialStiipDaysDataForClient,
   generateWholeStiipShift,
 } from "../utils/scheduleGenerationUtils";
@@ -27,14 +19,20 @@ export const updateSickDaysInPayPeriod = async (
       month: "long",
       year: "numeric",
     });
-    const q = query(collection(db, "sickHours", formattedDate, userInfo.id));
-    const querySnapshot = await getDocs(q);
+    const userRef = db
+      .collection("sickHours")
+      .doc(formattedDate)
+      .collection(userInfo.id);
+    const snapshot = await userRef.get();
+    if (snapshot.empty) {
+      console.log("no matching documents");
+      return;
+    }
 
-    querySnapshot.forEach((doc) => {
+    snapshot.forEach((doc) => {
       const payPeriodToUpdate = responseData.find(
         (period) => format(period.payDay, "PP") === doc.data().payDay
       );
-      // payDay is stored as ISO string when saving data to databse from client, in tests it is stored differently
 
       // only generate whole stiip shift data if document returned had the wholeShift boolean set to true
       if (doc.data().wholeShift) {
@@ -83,12 +81,14 @@ export const addWholeSickDayToDB = async (
       rotation,
       payDay,
     };
-    const docRef = doc(
-      collection(db, "sickHours", monthAndYear, userInfo.id),
-      date
-    );
-    await setDoc(docRef, data);
-    console.log("Document written with ID: ", docRef.id);
+
+    const res = await db
+      .collection("sickHours")
+      .doc(monthAndYear)
+      .collection(userInfo.id)
+      .doc(date)
+      .set(data);
+    console.log("Document written with ID: ", res.writeTime);
   } catch (e) {
     console.error("Error adding document: ", e);
   }
@@ -115,12 +115,14 @@ export const addPartialSickDayToDB = async (
       originalShiftEnd,
       updatedShiftEnd,
     };
-    const docRef = doc(
-      collection(db, "sickHours", monthAndYear, userInfo.id),
-      date
-    );
-    await setDoc(docRef, data);
-    console.log("Document written with ID: ", docRef.id);
+
+    const res = await db
+      .collection("sickHours")
+      .doc(monthAndYear)
+      .collection(userInfo.id)
+      .doc(date)
+      .set(data);
+    console.log("Document written with ID: ", res.writeTime);
   } catch (e) {
     console.error("Error adding document: ", e);
   }
