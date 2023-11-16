@@ -3,6 +3,7 @@ import { db } from "../config/firebase";
 import {
   IUserDataForDB,
   ITwoWeekPayPeriodForClient,
+  ISingleDaysPayDataForClient,
 } from "../interfaces/dbInterfaces";
 import { generateLateCallShift } from "./scheduleGenerationUtils";
 
@@ -39,6 +40,34 @@ export const addLateCallToDB = async (
   }
 };
 
+export const addOvertimeToDB = async (
+  userInfo: IUserDataForDB,
+  regularOTShift: ISingleDaysPayDataForClient,
+  index: number,
+  payDay: string,
+  monthAndYear: string
+) => {
+  if (regularOTShift.rotation === "Reg OT") {
+    try {
+      const data = {
+        index,
+        rotation: regularOTShift.rotation,
+        payDay,
+        shiftStart: regularOTShift.shiftStart,
+        shiftEnd: regularOTShift.shiftEnd,
+      };
+      const res = await db
+        .collection("overtimeHours")
+        .doc(monthAndYear)
+        .collection(userInfo.id)
+        .doc(regularOTShift.date.toISOString())
+        .set(data);
+    } catch (error) {
+      console.log(error);
+    }
+  }
+};
+
 export const updateOvertimeDaysInPayPeriod = async (
   responseData: ITwoWeekPayPeriodForClient[],
   userInfo: IUserDataForDB,
@@ -64,7 +93,7 @@ export const updateOvertimeDaysInPayPeriod = async (
         (period) => format(period.payDay, "PP") === doc.data().payDay
       );
 
-      // only generate whole stiip shift data if document returned had the wholeShift boolean set to true
+      // generate shift data depending if data saved was late call/regular OT/holiday recall
       if (doc.data().lateCall) {
         const { rotation, shiftStart, updatedShiftEnd, originalShiftEnd } =
           doc.data();

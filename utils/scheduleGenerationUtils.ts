@@ -167,29 +167,30 @@ export function generateLateCallShift(
 ) {
   const shiftStartForOT = new Date(shiftStart);
   const originalShiftEndForOT = new Date(originalShiftEnd);
-  const updatedShiftEndForForOT = new Date(updatedShiftEnd);
+  const updatedShiftEndForOT = new Date(updatedShiftEnd);
 
   const baseHoursWorked = getHoursWorked(
     shiftStartForOT,
     originalShiftEndForOT
   );
-  const OTHours = getHoursWorked(
+  const regOTHours = getHoursWorked(
     originalShiftEndForOT,
-    updatedShiftEndForForOT
+    updatedShiftEndForOT
   );
 
   // calculate new premium values accounting for the updated shift end time
   const nightHoursWorked = getNightShiftPremiumHoursWorked(
     shiftStartForOT,
-    updatedShiftEndForForOT
+    updatedShiftEndForOT
   );
   const weekendHoursWorked = getWeekendPremiumHoursWorked(
     shiftStartForOT,
-    updatedShiftEndForForOT
+    updatedShiftEndForOT
   );
 
   const baseWageEarnings = baseHoursWorked * parseFloat(userInfo.hourlyWage);
-  const regularOTEarnings = OTHours * (parseFloat(userInfo.hourlyWage) * 1.5);
+  const regularOTEarnings =
+    regOTHours * (parseFloat(userInfo.hourlyWage) * 2.0);
   const nightEarnings = nightHoursWorked * 2.0;
   const alphaNightsEarnings = nightHoursWorked * 3.6;
   const weekendEarnings = weekendHoursWorked * 2.25;
@@ -205,7 +206,7 @@ export function generateLateCallShift(
     date: day.date,
     rotation: day.rotation,
     shiftStart,
-    shiftEnd: updatedShiftEndForForOT,
+    shiftEnd: updatedShiftEndForOT,
     baseHoursWorked,
     nightHoursWorked,
     weekendHoursWorked,
@@ -214,7 +215,64 @@ export function generateLateCallShift(
     alphaNightsEarnings,
     weekendEarnings,
     dayTotal,
-    OTHours,
-    regularOTEarnings,
+    regOTHours,
+  };
+}
+
+// function to generate a singleDaysPayData when user requests to log overtime worked on a regular day off, hourly wage is 1.5x base rate up to 12 hours, then 2.0x base wage up to maximum 16 hour shift
+export function generateRegularOTShift(
+  userInfo: IUserDataForDB,
+  date: Date,
+  shiftStart: Date,
+  shiftEnd: Date
+) {
+  const shiftStartForOT = new Date(shiftStart);
+  const shiftEndForOT = new Date(shiftEnd);
+
+  const regOTHours = getHoursWorked(shiftStartForOT, shiftEndForOT);
+
+  // Calculate regular OT earnings for the first 12 hours
+  const first12HoursEarnings =
+    Math.min(regOTHours, 12) * (parseFloat(userInfo.hourlyWage) * 1.5);
+
+  // If regOTHours is greater than 12, calculate earnings for hours above 12 at 2.0x the hourly wage
+  const hoursAbove12Earnings =
+    regOTHours > 12
+      ? (regOTHours - 12) * (parseFloat(userInfo.hourlyWage) * 2.0)
+      : 0;
+
+  // calculate new premium values accounting for the updated shift end time
+  const nightHoursWorked = getNightShiftPremiumHoursWorked(
+    shiftStartForOT,
+    shiftEndForOT
+  );
+  const weekendHoursWorked = getWeekendPremiumHoursWorked(
+    shiftStartForOT,
+    shiftEndForOT
+  );
+
+  const nightEarnings = nightHoursWorked * 2.0;
+  const alphaNightsEarnings = nightHoursWorked * 3.6;
+  const weekendEarnings = weekendHoursWorked * 2.25;
+
+  const dayTotal =
+    alphaNightsEarnings +
+    nightEarnings +
+    weekendEarnings +
+    first12HoursEarnings +
+    hoursAbove12Earnings;
+
+  return {
+    date,
+    rotation: "Reg OT",
+    shiftStart,
+    shiftEnd: shiftEndForOT,
+    nightHoursWorked,
+    weekendHoursWorked,
+    nightEarnings,
+    alphaNightsEarnings,
+    weekendEarnings,
+    dayTotal,
+    regOTHours,
   };
 }

@@ -34,8 +34,9 @@ export interface ISingleDaysPayDataForClient {
   rotation: string; //Day 1, Day 2, Night 1 //
   shiftStart: Date;
   shiftEnd: Date;
-  baseHoursWorked: number;
-  baseWageEarnings: number;
+  // base hours/wage are optional because in a regular overtime/holiday recall shift, they will be 0 and the hours/earnings will be logged under the regOT and holidayOT properties
+  baseHoursWorked?: number;
+  baseWageEarnings?: number;
   nightHoursWorked: number;
   alphaNightsEarnings: number;
   nightEarnings: number;
@@ -43,6 +44,7 @@ export interface ISingleDaysPayDataForClient {
   weekendEarnings: number;
   dayTotal: number;
   stiipHours?: number;
+  regOTHours?: number;
 }
 
 export interface ITwoWeekPayPeriodForClient {
@@ -66,6 +68,12 @@ export interface IRequestForSinglePayDayData extends Request {
     // optional properties sent with requests to delete singleDaysPayData from database when user deselects stiip or overtime
     collectionInDB?: string;
     monthAndYear?: string;
+    // optional properties when requesting overtime shift data
+    shiftStart?: Date;
+    shiftEnd?: Date;
+    // index is stored in the db with the overtime info so when it is fetched in the future it can be inserted at into response data at the correct index
+    index?: number;
+    payDay?: string;
   };
 }
 

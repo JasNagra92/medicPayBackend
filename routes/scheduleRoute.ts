@@ -3,6 +3,7 @@ import {
   getLateCallData,
   getMonthsPayPeriodData,
   getPartialStiipData,
+  getRegularOTShift,
   getSingleDaysWorkData,
   getWholeStiipData,
 } from "../controllers/scheduleController";
@@ -14,5 +15,6 @@ router.post("/getDefaultDay", getSingleDaysWorkData);
 router.post("/addStiip", getWholeStiipData);
 router.post("/addPartialStiip", getPartialStiipData);
 router.post("/addOvertime", getLateCallData);
+router.post("/addRegularOvertime", getRegularOTShift);
 
 export default router;

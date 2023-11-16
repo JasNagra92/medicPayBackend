@@ -13,6 +13,7 @@ import {
   generateWholeStiipShift,
   generatePartialStiipDaysDataForClient,
   generateLateCallShift,
+  generateRegularOTShift,
 } from "../utils/scheduleGenerationUtils";
 import {
   addPartialSickDayToDB,
@@ -20,7 +21,11 @@ import {
 } from "../utils/sickDayUtils";
 import { getPayPeriodFromMonthYearAndPlatoon } from "../utils/seedDateUtils";
 import { addWholeSickDayToDB } from "../utils/sickDayUtils";
-import { addLateCallToDB } from "../utils/overtimeUtils";
+import {
+  addLateCallToDB,
+  updateOvertimeDaysInPayPeriod,
+  addOvertimeToDB,
+} from "../utils/overtimeUtils";
 import { removeDayFromDB } from "../utils/databaseUtils";
 
 export const getMonthsPayPeriodData = async (
@@ -54,6 +59,12 @@ export const getMonthsPayPeriodData = async (
     }
     // before sending data back to the client, query the database with the given month and year, along with the userUUID, to recieve all the sick days the user has previously logged in that month, loop through that list inserting the newly generated sick days into the responseData array, searching by the payDay value and index in the returned documents
     await updateSickDaysInPayPeriod(
+      responseData,
+      userInfo,
+      new Date(year, month - 1)
+    );
+
+    await updateOvertimeDaysInPayPeriod(
       responseData,
       userInfo,
       new Date(year, month - 1)
@@ -204,4 +215,23 @@ export const getLateCallData = async (
   );
 
   res.status(200).send({ data: dayWithLateCall });
+};
+
+export const getRegularOTShift = async (
+  req: IRequestForSinglePayDayData,
+  res: Response
+) => {
+  const { userInfo, date, shiftStart, shiftEnd, index, payDay, monthAndYear } =
+    req.body;
+
+  const regularOTDay = generateRegularOTShift(
+    userInfo,
+    new Date(date),
+    shiftStart!,
+    shiftEnd!
+  );
+
+  await addOvertimeToDB(userInfo, regularOTDay, index!, payDay!, monthAndYear!);
+
+  res.status(200).send({ data: regularOTDay });
 };
