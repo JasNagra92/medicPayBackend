@@ -153,7 +153,12 @@ export const getSingleDaysWorkData = async (
   req: IRequestForSinglePayDayData,
   res: Response
 ) => {
-  const { userInfo, date, rotation, collectionInDB, monthAndYear } = req.body;
+  let { userInfo, date, rotation, collectionInDB, monthAndYear } = req.body;
+  // check if the shift being sent and "deselcted" in front end was an overtime shift on a day off or late call overtime. Overtime on a day off needs to send back a Day Off payday object where as a rotation day that has Day 1/Day 2/Night 1/Night 2, needs to send back a single day with the rotation set back to that value
+  if (rotation === "Reg OT") {
+    rotation = "day off";
+  }
+
   const singleDaysPayData = generateSingleDaysDataForClient(userInfo, {
     date: new Date(date),
     rotation,

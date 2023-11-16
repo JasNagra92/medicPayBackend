@@ -215,7 +215,7 @@ export function generateLateCallShift(
     alphaNightsEarnings,
     weekendEarnings,
     dayTotal,
-    regOTHours,
+    OTDoubleTime: regOTHours,
   };
 }
 
@@ -265,6 +265,8 @@ export function generateRegularOTShift(
   return {
     date,
     rotation: "Reg OT",
+    baseHoursWorked: 0,
+    baseWageEarnings: 0,
     shiftStart,
     shiftEnd: shiftEndForOT,
     nightHoursWorked,
@@ -273,6 +275,7 @@ export function generateRegularOTShift(
     alphaNightsEarnings,
     weekendEarnings,
     dayTotal,
-    regOTHours,
+    OTOnePointFive: Math.min(regOTHours, 12),
+    OTDoubleTime: regOTHours > 12 ? regOTHours - 12 : undefined,
   };
 }

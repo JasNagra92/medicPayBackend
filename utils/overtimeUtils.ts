@@ -5,7 +5,10 @@ import {
   ITwoWeekPayPeriodForClient,
   ISingleDaysPayDataForClient,
 } from "../interfaces/dbInterfaces";
-import { generateLateCallShift } from "./scheduleGenerationUtils";
+import {
+  generateLateCallShift,
+  generateRegularOTShift,
+} from "./scheduleGenerationUtils";
 
 export const addLateCallToDB = async (
   userInfo: IUserDataForDB,
@@ -109,6 +112,20 @@ export const updateOvertimeDaysInPayPeriod = async (
         if (payPeriodToUpdate) {
           payPeriodToUpdate.workDaysInPayPeriod[doc.data().index] =
             lateCallPayData;
+        }
+      } else if (doc.data().rotation === "Reg OT") {
+        const { shiftStart, shiftEnd } = doc.data();
+
+        const regularOTDay = generateRegularOTShift(
+          userInfo,
+          new Date(doc.id),
+          new Date(shiftStart),
+          new Date(shiftEnd)
+        );
+
+        if (payPeriodToUpdate) {
+          payPeriodToUpdate.workDaysInPayPeriod[doc.data().index] =
+            regularOTDay;
         }
       }
     });
