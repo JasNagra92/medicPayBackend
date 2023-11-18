@@ -9,6 +9,7 @@ import {
   generateHolidayRecallShift,
   generateLateCallShift,
   generateRegularOTShift,
+  generateVacationShift,
 } from "./scheduleGenerationUtils";
 
 export const addLateCallToDB = async (
@@ -161,6 +162,48 @@ export const updateOvertimeDaysInPayPeriod = async (
         if (payPeriodToUpdate) {
           payPeriodToUpdate.workDaysInPayPeriod[doc.data().index] = recallOTDay;
         }
+      }
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const updateHolidayBlocksInPayPeriod = async (
+  responseData: ITwoWeekPayPeriodForClient[],
+  userInfo: IUserDataForDB,
+  monthAndYear: Date
+) => {
+  try {
+    const formattedDate = monthAndYear.toLocaleDateString("en-us", {
+      month: "long",
+      year: "numeric",
+    });
+    const userRef = db
+      .collection("holidayBlocks")
+      .doc(formattedDate)
+      .collection(userInfo.id);
+    // only search for the holiday block dates that the user did not work, the dates where they worked will be updated in the previous updateOvertimeDaysInPayPeriod function and the boolean will be set to true for those days
+    const snapshot = await userRef.where("worked", "==", false).get();
+    if (snapshot.empty) {
+      console.log("no matching documents");
+      return;
+    }
+
+    snapshot.forEach((doc) => {
+      const payPeriodToUpdate = responseData.find(
+        (period) => format(period.payDay, "PP") === doc.data().payDay
+      );
+      const { shiftStart, shiftEnd, rotation, index } = doc.data();
+      const date = doc.id;
+      const vacationDay = generateVacationShift(
+        userInfo,
+        { date: new Date(date), rotation },
+        shiftStart,
+        shiftEnd
+      );
+      if (payPeriodToUpdate) {
+        payPeriodToUpdate.workDaysInPayPeriod[index] = vacationDay;
       }
     });
   } catch (error) {
