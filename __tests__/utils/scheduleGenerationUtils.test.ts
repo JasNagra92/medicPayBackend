@@ -97,7 +97,6 @@ describe("generateLateCallShift", () => {
       updatedShiftEnd,
       originalShiftEnd
     );
-    expect(result.OTHours).toEqual(1);
-    expect(result.regularOTEarnings).toBeDefined();
+    expect(result.OTDoubleTime).toEqual(1);
   });
 });

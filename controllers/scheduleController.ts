@@ -4,16 +4,19 @@ import {
   IRequestForPartialStiip,
   ISingleDaysPayDataForClient,
   ITwoWeekPayPeriodForClient,
+  IRequestForPayDayData,
+  IRequestForHolidayBlock,
 } from "./../interfaces/dbInterfaces";
 import { DateTime } from "luxon";
 import { Response } from "express";
-import { IRequestForPayDayData } from "../interfaces/dbInterfaces";
 import {
   generateSingleDaysDataForClient,
   generateWholeStiipShift,
   generatePartialStiipDaysDataForClient,
   generateLateCallShift,
   generateRegularOTShift,
+  generateHolidayRecallShift,
+  generateVacationBlock,
 } from "../utils/scheduleGenerationUtils";
 import {
   addPartialSickDayToDB,
@@ -26,7 +29,8 @@ import {
   updateOvertimeDaysInPayPeriod,
   addOvertimeToDB,
 } from "../utils/overtimeUtils";
-import { removeDayFromDB } from "../utils/databaseUtils";
+import { addHolidayBlockToDB, removeDayFromDB } from "../utils/databaseUtils";
+import { db } from "../config/firebase";
 
 export const getMonthsPayPeriodData = async (
   req: IRequestForPayDayData,
@@ -158,7 +162,22 @@ export const getSingleDaysWorkData = async (
   if (rotation === "Reg OT") {
     rotation = "day off";
   }
-
+  if (rotation === "Recall") {
+    try {
+      const doc = await db
+        .collection("overtimeHours")
+        .doc(monthAndYear!)
+        .collection(userInfo.id)
+        .doc(date)
+        .get();
+      if (doc) {
+        let prevRotation = doc.data()!.prevRotation;
+        rotation = prevRotation;
+      }
+    } catch (error) {
+      console.log("no documents found");
+    }
+  }
   const singleDaysPayData = generateSingleDaysDataForClient(userInfo, {
     date: new Date(date),
     rotation,
@@ -239,4 +258,51 @@ export const getRegularOTShift = async (
   await addOvertimeToDB(userInfo, regularOTDay, index!, payDay!, monthAndYear!);
 
   res.status(200).send({ data: regularOTDay });
+};
+
+export const getRecallOTShift = async (
+  req: IRequestForSinglePayDayData,
+  res: Response
+) => {
+  const {
+    userInfo,
+    date,
+    shiftStart,
+    shiftEnd,
+    index,
+    payDay,
+    monthAndYear,
+    prevRotation,
+  } = req.body;
+
+  const recallOTDay = generateHolidayRecallShift(
+    userInfo,
+    new Date(date),
+    shiftStart!,
+    shiftEnd!
+  );
+
+  await addOvertimeToDB(
+    userInfo,
+    recallOTDay,
+    index!,
+    payDay!,
+    monthAndYear!,
+    prevRotation
+  );
+
+  res.status(200).send({ data: recallOTDay });
+};
+
+export const getHolidayBlock = async (
+  req: IRequestForHolidayBlock,
+  res: Response
+) => {
+  const { userInfo, vacationDates } = req.body;
+
+  const vacationBlock = generateVacationBlock(userInfo, vacationDates);
+
+  await addHolidayBlockToDB(userInfo, vacationDates);
+
+  res.status(200).send({ data: vacationBlock });
 };

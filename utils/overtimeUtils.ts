@@ -6,6 +6,7 @@ import {
   ISingleDaysPayDataForClient,
 } from "../interfaces/dbInterfaces";
 import {
+  generateHolidayRecallShift,
   generateLateCallShift,
   generateRegularOTShift,
 } from "./scheduleGenerationUtils";
@@ -45,25 +46,45 @@ export const addLateCallToDB = async (
 
 export const addOvertimeToDB = async (
   userInfo: IUserDataForDB,
-  regularOTShift: ISingleDaysPayDataForClient,
+  OTShift: ISingleDaysPayDataForClient,
   index: number,
   payDay: string,
-  monthAndYear: string
+  monthAndYear: string,
+  prevRotation?: string
 ) => {
-  if (regularOTShift.rotation === "Reg OT") {
+  if (OTShift.rotation === "Reg OT") {
     try {
       const data = {
         index,
-        rotation: regularOTShift.rotation,
+        rotation: OTShift.rotation,
         payDay,
-        shiftStart: regularOTShift.shiftStart,
-        shiftEnd: regularOTShift.shiftEnd,
+        shiftStart: OTShift.shiftStart,
+        shiftEnd: OTShift.shiftEnd,
       };
       const res = await db
         .collection("overtimeHours")
         .doc(monthAndYear)
         .collection(userInfo.id)
-        .doc(regularOTShift.date.toISOString())
+        .doc(OTShift.date.toISOString())
+        .set(data);
+    } catch (error) {
+      console.log(error);
+    }
+  } else if (OTShift.rotation === "Recall") {
+    try {
+      const data = {
+        index,
+        rotation: OTShift.rotation,
+        payDay,
+        shiftStart: OTShift.shiftStart,
+        shiftEnd: OTShift.shiftEnd,
+        prevRotation,
+      };
+      const res = await db
+        .collection("overtimeHours")
+        .doc(monthAndYear)
+        .collection(userInfo.id)
+        .doc(OTShift.date.toISOString())
         .set(data);
     } catch (error) {
       console.log(error);
@@ -126,6 +147,19 @@ export const updateOvertimeDaysInPayPeriod = async (
         if (payPeriodToUpdate) {
           payPeriodToUpdate.workDaysInPayPeriod[doc.data().index] =
             regularOTDay;
+        }
+      } else if (doc.data().rotation === "Recall") {
+        const { shiftStart, shiftEnd } = doc.data();
+
+        const recallOTDay = generateHolidayRecallShift(
+          userInfo,
+          new Date(doc.id),
+          new Date(shiftStart),
+          new Date(shiftEnd)
+        );
+
+        if (payPeriodToUpdate) {
+          payPeriodToUpdate.workDaysInPayPeriod[doc.data().index] = recallOTDay;
         }
       }
     });

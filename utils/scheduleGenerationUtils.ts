@@ -1,4 +1,4 @@
-import { IUserDataForDB } from "./../interfaces/dbInterfaces";
+import { IUserDataForDB, IVacationDates } from "./../interfaces/dbInterfaces";
 import {
   ISingleDaysPayDataForClient,
   IScheduleItem,
@@ -268,7 +268,7 @@ export function generateRegularOTShift(
     baseHoursWorked: 0,
     baseWageEarnings: 0,
     shiftStart,
-    shiftEnd: shiftEndForOT,
+    shiftEnd,
     nightHoursWorked,
     weekendHoursWorked,
     nightEarnings,
@@ -278,4 +278,102 @@ export function generateRegularOTShift(
     OTOnePointFive: Math.min(regOTHours, 12),
     OTDoubleTime: regOTHours > 12 ? regOTHours - 12 : undefined,
   };
+}
+
+// function to generate a singleDaysPayData when user requests to log a holiday recall shift, base wage earnings and hours should be calculated from the userInfo object, because user still gets paid their base wage, but all premiums needs to be calculated from the hours sent as overTimeShiftStart and End, as well as the overtimeDoubleTime variable needs to be set from the overtimeShiftStart and end variables
+export function generateHolidayRecallShift(
+  userInfo: IUserDataForDB,
+  date: Date,
+  shiftStart: Date,
+  shiftEnd: Date
+) {
+  const shiftStartForOT = new Date(shiftStart);
+  const shiftEndForOT = new Date(shiftEnd);
+
+  const OTDoubleTime = getHoursWorked(shiftStartForOT, shiftEndForOT);
+  const OTDoubleTimeEarnings =
+    OTDoubleTime * (parseFloat(userInfo.hourlyWage) * 2.0);
+  const nightHoursWorked = getNightShiftPremiumHoursWorked(
+    shiftStartForOT,
+    shiftEndForOT
+  );
+  const weekendHoursWorked = getWeekendPremiumHoursWorked(
+    shiftStartForOT,
+    shiftEndForOT
+  );
+  const nightEarnings = nightHoursWorked * 2.0;
+  const alphaNightsEarnings = nightHoursWorked * 3.6;
+  const weekendEarnings = weekendHoursWorked * 2.25;
+
+  const dayTotal =
+    alphaNightsEarnings +
+    nightEarnings +
+    weekendEarnings +
+    OTDoubleTimeEarnings;
+
+  return {
+    date,
+    rotation: "Recall",
+    baseHoursWorked: 0,
+    baseWageEarnings: 0,
+    shiftStart,
+    shiftEnd,
+    nightHoursWorked,
+    weekendHoursWorked,
+    nightEarnings,
+    alphaNightsEarnings,
+    weekendEarnings,
+    dayTotal,
+    OTDoubleTime,
+  };
+}
+
+export function generateVacationShift(
+  userInfo: IUserDataForDB,
+  date: IScheduleItem,
+  shiftStart: Date,
+  shiftEnd: Date
+) {
+  // Alpha employees shifts are always 12 hours, Bravo/Charlie are always 11
+  const baseHoursWorked = userInfo.shiftPattern === "Alpha" ? 12 : 11;
+  const nightHoursWorked = 0;
+  const weekendHoursWorked = 0;
+  const baseWageEarnings = baseHoursWorked * parseFloat(userInfo.hourlyWage);
+  const nightEarnings = 0;
+  const weekendEarnings = 0;
+  const alphaNightsEarnings = 0;
+  const dayTotal = baseWageEarnings;
+
+  return {
+    date: date.date,
+    rotation: "Vacation",
+    shiftStart,
+    shiftEnd,
+    baseHoursWorked,
+    nightHoursWorked,
+    weekendHoursWorked,
+    baseWageEarnings,
+    nightEarnings,
+    alphaNightsEarnings,
+    weekendEarnings,
+    dayTotal,
+  };
+}
+
+export function generateVacationBlock(
+  userInfo: IUserDataForDB,
+  dates: IVacationDates[]
+) {
+  let data = [];
+  for (const date of dates) {
+    data.push(
+      generateVacationShift(
+        userInfo,
+        { date: date.date, rotation: date.rotation },
+        date.shiftStart,
+        date.shiftEnd
+      )
+    );
+  }
+  return data;
 }

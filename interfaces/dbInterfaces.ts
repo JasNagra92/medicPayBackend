@@ -75,6 +75,7 @@ export interface IRequestForSinglePayDayData extends Request {
     // index is stored in the db with the overtime info so when it is fetched in the future it can be inserted at into response data at the correct index
     index?: number;
     payDay?: string;
+    prevRotation?: string;
   };
 }
 
@@ -101,4 +102,19 @@ export interface IRequestForPartialStiip extends Request {
     payDay: string;
     index: number;
   };
+}
+export interface IRequestForHolidayBlock extends Request {
+  body: {
+    userInfo: IUserDataForDB;
+    vacationDates: IVacationDates[];
+  };
+}
+
+export interface IVacationDates {
+  date: Date;
+  rotation: string;
+  shiftStart: Date;
+  shiftEnd: Date;
+  payDay: string;
+  index: number;
 }
