@@ -76,6 +76,9 @@ export interface IRequestForSinglePayDayData extends Request {
     index?: number;
     payDay?: string;
     prevRotation?: string;
+
+    month?: number;
+    year?: number;
   };
 }
 

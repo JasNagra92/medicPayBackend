@@ -285,7 +285,8 @@ export function generateHolidayRecallShift(
   userInfo: IUserDataForDB,
   date: Date,
   shiftStart: Date,
-  shiftEnd: Date
+  shiftEnd: Date,
+  prevRotation?: string
 ) {
   const shiftStartForOT = new Date(shiftStart);
   const shiftEndForOT = new Date(shiftEnd);
@@ -310,12 +311,20 @@ export function generateHolidayRecallShift(
     nightEarnings +
     weekendEarnings +
     OTDoubleTimeEarnings;
+  let baseHoursWorked = 0;
+  let baseWageEarnings = 0;
+
+  // if the ot the user worked was on a Vacation day, they are still paid their base wage, on top of the OTDouble Time
+  if (prevRotation === "Vacation") {
+    baseHoursWorked = userInfo.shiftPattern === "Alpha" ? 12 : 11;
+    baseWageEarnings = parseFloat(userInfo.hourlyWage) * baseHoursWorked;
+  }
 
   return {
     date,
     rotation: "Recall",
-    baseHoursWorked: 0,
-    baseWageEarnings: 0,
+    baseHoursWorked,
+    baseWageEarnings,
     shiftStart,
     shiftEnd,
     nightHoursWorked,

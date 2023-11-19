@@ -93,6 +93,24 @@ export const addOvertimeToDB = async (
   }
 };
 
+export const markHolidayShiftWorked = async (
+  monthAndYear: string,
+  userInfo: IUserDataForDB,
+  date: string
+) => {
+  try {
+    let res = await db
+      .collection("holidayBlocks")
+      .doc(monthAndYear)
+      .collection(userInfo.id)
+      .doc(new Date(date).toISOString())
+      .update({ worked: true });
+    console.log(res.writeTime);
+  } catch (error) {
+    console.log(error);
+  }
+};
+
 export const updateOvertimeDaysInPayPeriod = async (
   responseData: ITwoWeekPayPeriodForClient[],
   userInfo: IUserDataForDB,
@@ -109,7 +127,7 @@ export const updateOvertimeDaysInPayPeriod = async (
       .collection(userInfo.id);
     const snapshot = await userRef.get();
     if (snapshot.empty) {
-      console.log("no matching documents");
+      console.log("no matching documents in updateOverTimeDays");
       return;
     }
 
@@ -150,13 +168,14 @@ export const updateOvertimeDaysInPayPeriod = async (
             regularOTDay;
         }
       } else if (doc.data().rotation === "Recall") {
-        const { shiftStart, shiftEnd } = doc.data();
+        const { shiftStart, shiftEnd, prevRotation } = doc.data();
 
         const recallOTDay = generateHolidayRecallShift(
           userInfo,
           new Date(doc.id),
           new Date(shiftStart),
-          new Date(shiftEnd)
+          new Date(shiftEnd),
+          prevRotation
         );
 
         if (payPeriodToUpdate) {
@@ -186,14 +205,17 @@ export const updateHolidayBlocksInPayPeriod = async (
     // only search for the holiday block dates that the user did not work, the dates where they worked will be updated in the previous updateOvertimeDaysInPayPeriod function and the boolean will be set to true for those days
     const snapshot = await userRef.where("worked", "==", false).get();
     if (snapshot.empty) {
-      console.log("no matching documents");
+      console.log("no matching documents in updateHolidayBlocks");
       return;
     }
 
     snapshot.forEach((doc) => {
       const payPeriodToUpdate = responseData.find(
-        (period) => format(period.payDay, "PP") === doc.data().payDay
+        (period) =>
+          new Date(period.payDay).getTime() ===
+          new Date(doc.data().payDay).getTime()
       );
+
       const { shiftStart, shiftEnd, rotation, index } = doc.data();
       const date = doc.id;
       const vacationDay = generateVacationShift(

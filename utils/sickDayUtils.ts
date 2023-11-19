@@ -25,7 +25,7 @@ export const updateSickDaysInPayPeriod = async (
       .collection(userInfo.id);
     const snapshot = await userRef.get();
     if (snapshot.empty) {
-      console.log("no matching documents");
+      console.log("no matching documents in updateSickDays");
       return;
     }
 

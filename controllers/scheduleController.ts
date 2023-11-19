@@ -28,9 +28,12 @@ import {
   addLateCallToDB,
   updateOvertimeDaysInPayPeriod,
   addOvertimeToDB,
+  markHolidayShiftWorked,
+  updateHolidayBlocksInPayPeriod,
 } from "../utils/overtimeUtils";
 import { addHolidayBlockToDB, removeDayFromDB } from "../utils/databaseUtils";
 import { db } from "../config/firebase";
+import format from "date-fns/format";
 
 export const getMonthsPayPeriodData = async (
   req: IRequestForPayDayData,
@@ -69,6 +72,12 @@ export const getMonthsPayPeriodData = async (
     );
 
     await updateOvertimeDaysInPayPeriod(
+      responseData,
+      userInfo,
+      new Date(year, month - 1)
+    );
+
+    await updateHolidayBlocksInPayPeriod(
       responseData,
       userInfo,
       new Date(year, month - 1)
@@ -157,40 +166,25 @@ export const getSingleDaysWorkData = async (
   req: IRequestForSinglePayDayData,
   res: Response
 ) => {
-  let { userInfo, date, rotation, collectionInDB, monthAndYear } = req.body;
-  // check if the shift being sent and "deselcted" in front end was an overtime shift on a day off or late call overtime. Overtime on a day off needs to send back a Day Off payday object where as a rotation day that has Day 1/Day 2/Night 1/Night 2, needs to send back a single day with the rotation set back to that value
-  if (rotation === "Reg OT") {
-    rotation = "day off";
-  } else if (rotation === "Recall") {
-    try {
-      const doc = await db
-        .collection("overtimeHours")
-        .doc(monthAndYear!)
-        .collection(userInfo.id)
-        .doc(date)
-        .get();
-      if (doc) {
-        rotation = doc.data()!.prevRotation;
-        console.log(rotation);
-      }
-    } catch (error) {
-      console.log("no documents found");
-    }
-  } else if (rotation === "Vacation") {
-    try {
-      const doc = await db
-        .collection("holidayBlocks")
-        .doc(monthAndYear!)
-        .collection(userInfo.id)
-        .doc(date)
-        .get();
-      if (doc) {
-        rotation = doc.data()!.prevRotation;
-      }
-    } catch (error) {
-      console.log("no documents found");
-    }
-  }
+  let {
+    userInfo,
+    date,
+    collectionInDB,
+    monthAndYear,
+    month,
+    year,
+    index,
+    payDay,
+  } = req.body;
+
+  // generate months payDay data and generate single days with the default rotation
+  let data = getPayPeriodFromMonthYearAndPlatoon(
+    userInfo.platoon,
+    month!,
+    year!
+  );
+
+  let rotation = data[DateTime.fromISO(payDay!).toISODate()!][index!].rotation;
 
   const singleDaysPayData = generateSingleDaysDataForClient(userInfo, {
     date: new Date(date),
@@ -293,7 +287,8 @@ export const getRecallOTShift = async (
     userInfo,
     new Date(date),
     shiftStart!,
-    shiftEnd!
+    shiftEnd!,
+    prevRotation!
   );
 
   await addOvertimeToDB(
@@ -304,6 +299,11 @@ export const getRecallOTShift = async (
     monthAndYear!,
     prevRotation
   );
+
+  if (prevRotation === "Vacation") {
+    // if user is requesting to log an OT shift on a vacation block, need to update the corresponding holidayBlocks document and flip worked to true
+    await markHolidayShiftWorked(monthAndYear!, userInfo, date);
+  }
 
   res.status(200).send({ data: recallOTDay });
 };
