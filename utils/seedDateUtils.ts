@@ -1,5 +1,10 @@
 import { DateTime } from "luxon";
-import { IScheduleItem } from "../interfaces/dbInterfaces";
+import {
+  IEIDeductions,
+  IScheduleItem,
+  IUserDataForDB,
+} from "../interfaces/dbInterfaces";
+import { generateSingleDaysDataForClient } from "./scheduleGenerationUtils";
 const rotation = [
   "Day 1",
   "Day 2",
@@ -11,15 +16,15 @@ const rotation = [
   "day off",
 ];
 
-const seedDateFirstPayday = "2023-01-27";
-const seedDateFirstPayPeriodStart = "2023-01-06";
+const seedDateFirstPayday = "2023-01-13";
+const seedDateFirstPayPeriodStart = "2022-12-23";
 
 //   where in the rotation index each platoon was on the first day of the second pay period in January, january 27 2023
 const startingRotationIndex: Record<string, number> = {
-  A: 2,
-  B: 0,
-  C: 6,
-  D: 4,
+  A: 4,
+  B: 2,
+  C: 0,
+  D: 6,
 };
 
 export const getPayPeriodFromMonthYearAndPlatoon = (
@@ -67,3 +72,106 @@ export const getPayPeriodFromMonthYearAndPlatoon = (
     throw error;
   }
 };
+
+// function to take a given year and platoon, generate that platoon schedule for the year, and for the pay periods in each month, calculate the DayTotals for the default shifts, and return 1.63% of those values
+export function getEIDeductionsForYear(
+  platoon: string,
+  year: number,
+  userInfo: IUserDataForDB
+) {
+  try {
+    let seed = DateTime.fromISO(seedDateFirstPayday);
+    let payPeriodStart = DateTime.fromISO(seedDateFirstPayPeriodStart);
+    let data: Record<string, IScheduleItem[]> = {};
+    let yearsEIDeductions: IEIDeductions[] = [];
+
+    // Initialize rotation index outside the loop based on the platoon
+    let rotationIndex = startingRotationIndex[platoon];
+
+    while (seed.year <= year) {
+      if (seed.year === year) {
+        let currentPayPeriodData: IScheduleItem[] = [];
+
+        for (let day = 0; day < 14; day++) {
+          const currentDate = payPeriodStart.plus({ days: day }).toISODate();
+          const rotationDay = rotation[(rotationIndex + day) % rotation.length];
+          // only run the logic for generating a pay days data and calculating the day total for shifts that were worked
+          if (rotationDay !== "day off") {
+            currentPayPeriodData.push({
+              date: DateTime.fromISO(currentDate!).toJSDate(),
+              rotation: rotationDay,
+            });
+          }
+          data[seed.toISODate()!] = currentPayPeriodData;
+        }
+      }
+
+      //   increment all the counters by 14
+      payPeriodStart = payPeriodStart.plus({ days: 14 });
+      seed = seed.plus({ days: 14 });
+
+      // Increment rotation index outside the loop
+      rotationIndex = (rotationIndex + 14) % rotation.length;
+    }
+    const maxEIDeduction = 1002.45;
+    let totalEIDeduction = 0;
+
+    // after all the years work days have been populated, create a new array by generating work days data, and summing day Totals for each shift
+    for (const [paydayDate, array] of Object.entries(data)) {
+      let paydayTotal = 0;
+      let hoursWorkedInPayPeriod = 0;
+
+      // iterate over each array of dates in the payday
+
+      for (const day of array) {
+        let dayData = generateSingleDaysDataForClient(userInfo, day);
+        paydayTotal += dayData.dayTotal;
+        hoursWorkedInPayPeriod += dayData.baseHoursWorked!;
+      }
+
+      // Calculate the EI deduction for the current pay period
+      const currentEIDeduction =
+        Number(
+          (80 - hoursWorkedInPayPeriod) * parseFloat(userInfo.hourlyWage) +
+            paydayTotal
+        ) * 0.0163;
+
+      // Calculate the YTD value excluding the current entry
+      const ytdExcludingCurrent = totalEIDeduction;
+
+      // Check if adding the current deduction exceeds the maximum
+      if (totalEIDeduction + currentEIDeduction > maxEIDeduction) {
+        // Adjust the current deduction to make sure it doesn't exceed the maximum
+        const remainingDeduction = maxEIDeduction - totalEIDeduction;
+        totalEIDeduction += remainingDeduction;
+
+        // Push the current pay period data with the adjusted deduction
+        yearsEIDeductions.push({
+          currentDeduction: Number(remainingDeduction.toFixed(2)),
+          YTD: Number(ytdExcludingCurrent.toFixed(2)),
+          payDay: paydayDate,
+          grossIncome: Number(
+            (80 - hoursWorkedInPayPeriod) * parseFloat(userInfo.hourlyWage) +
+              paydayTotal
+          ),
+        });
+      } else {
+        // Continue with the normal deduction calculation
+        totalEIDeduction += currentEIDeduction;
+        yearsEIDeductions.push({
+          currentDeduction: Number(currentEIDeduction.toFixed(2)),
+          YTD: Number(ytdExcludingCurrent.toFixed(2)),
+          payDay: paydayDate,
+          grossIncome: Number(
+            (80 - hoursWorkedInPayPeriod) * parseFloat(userInfo.hourlyWage) +
+              paydayTotal
+          ),
+        });
+      }
+    }
+
+    return yearsEIDeductions;
+  } catch (error) {
+    console.log(error + "erorr generating ei deductions");
+  }
+}

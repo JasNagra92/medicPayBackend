@@ -16,6 +16,13 @@ export interface IScheduleItem {
   rotation: string;
 }
 
+export interface IEIDeductions {
+  currentDeduction: number;
+  YTD: number;
+  payDay: string;
+  grossIncome: number;
+}
+
 export interface IUserDataForDB {
   id: string;
   email: string;
