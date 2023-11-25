@@ -1,6 +1,6 @@
 import { DateTime } from "luxon";
 import {
-  IEIDeductions,
+  IDeductions,
   IScheduleItem,
   IUserDataForDB,
 } from "../interfaces/dbInterfaces";
@@ -83,7 +83,7 @@ export function getEIDeductionsForYear(
     let seed = DateTime.fromISO(seedDateFirstPayday);
     let payPeriodStart = DateTime.fromISO(seedDateFirstPayPeriodStart);
     let data: Record<string, IScheduleItem[]> = {};
-    let yearsEIDeductions: IEIDeductions[] = [];
+    let yearsEIDeductions: IDeductions[] = [];
 
     // Initialize rotation index outside the loop based on the platoon
     let rotationIndex = startingRotationIndex[platoon];
@@ -147,8 +147,8 @@ export function getEIDeductionsForYear(
 
         // Push the current pay period data with the adjusted deduction
         yearsEIDeductions.push({
-          currentDeduction: Number(remainingDeduction.toFixed(2)),
-          YTD: Number(ytdExcludingCurrent.toFixed(2)),
+          currentEIDeduction: Number(remainingDeduction.toFixed(2)),
+          YTDEIDeduction: Number(ytdExcludingCurrent.toFixed(2)),
           payDay: paydayDate,
           grossIncome: Number(
             (80 - hoursWorkedInPayPeriod) * parseFloat(userInfo.hourlyWage) +
@@ -159,8 +159,8 @@ export function getEIDeductionsForYear(
         // Continue with the normal deduction calculation
         totalEIDeduction += currentEIDeduction;
         yearsEIDeductions.push({
-          currentDeduction: Number(currentEIDeduction.toFixed(2)),
-          YTD: Number(ytdExcludingCurrent.toFixed(2)),
+          currentEIDeduction: Number(currentEIDeduction.toFixed(2)),
+          YTDEIDeduction: Number(ytdExcludingCurrent.toFixed(2)),
           payDay: paydayDate,
           grossIncome: Number(
             (80 - hoursWorkedInPayPeriod) * parseFloat(userInfo.hourlyWage) +

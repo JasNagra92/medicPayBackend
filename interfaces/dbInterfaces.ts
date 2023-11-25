@@ -16,9 +16,9 @@ export interface IScheduleItem {
   rotation: string;
 }
 
-export interface IEIDeductions {
-  currentDeduction: number;
-  YTD: number;
+export interface IDeductions {
+  currentEIDeduction: number;
+  YTDEIDeduction: number;
   payDay: string;
   grossIncome: number;
 }
@@ -127,4 +127,15 @@ export interface IVacationDates {
   shiftEnd: Date;
   payDay: string;
   index: number;
+}
+
+export interface IRequestForDeductionData extends Request {
+  body: {
+    userInfo: IUserDataForDB;
+    grossIncome: number;
+    stiipHours: number;
+    OTOnePointFiveAmount?: number;
+    OTDoubleTimeAmount?: number;
+    incomeLessLevelling: number;
+  };
 }

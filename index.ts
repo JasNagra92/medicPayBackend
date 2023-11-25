@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import bodyParser from "body-parser";
 import getTwoWeekDataRoute from "./routes/scheduleRoute";
+import getDeductionsRoute from "./routes/deductionsRoute";
 
 dotenv.config();
 
@@ -18,6 +19,7 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 app.use("/getPayData", getTwoWeekDataRoute);
+app.use("/getDeductions", getDeductionsRoute);
 
 // export the app prior to starting the server for testing
 export default app;

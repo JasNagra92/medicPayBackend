@@ -306,7 +306,7 @@ export function generateHolidayRecallShift(
   const alphaNightsEarnings = nightHoursWorked * 3.6;
   const weekendEarnings = weekendHoursWorked * 2.25;
 
-  const dayTotal =
+  let dayTotal =
     alphaNightsEarnings +
     nightEarnings +
     weekendEarnings +
@@ -318,6 +318,7 @@ export function generateHolidayRecallShift(
   if (prevRotation === "Vacation") {
     baseHoursWorked = userInfo.shiftPattern === "Alpha" ? 12 : 11;
     baseWageEarnings = parseFloat(userInfo.hourlyWage) * baseHoursWorked;
+    dayTotal = dayTotal + baseWageEarnings;
   }
 
   return {
