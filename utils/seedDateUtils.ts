@@ -73,8 +73,8 @@ export const getPayPeriodFromMonthYearAndPlatoon = (
   }
 };
 
-// function to take a given year and platoon, generate that platoon schedule for the year, and for the pay periods in each month, calculate the DayTotals for the default shifts, and return 1.63% of those values
-export function getEIDeductionsForYear(
+// function to take a given year and platoon, generate that platoon schedule for the year, and for the pay periods in each month, calculate the DayTotals for the default shifts, and return an object with gross income and both CPP/EI deductions listed for the default hours worked. This array will be saved for each user with the payday dates, and will be updated each time the user logs OT or sick time, the EI/CPP values will be updated and the previous values will be used to validate the updated EI/CPP figures to make sure the YTD maximums are not exceeded with the new deduction amounts
+export function getDeductionsForYear(
   platoon: string,
   year: number,
   userInfo: IUserDataForDB
@@ -113,8 +113,12 @@ export function getEIDeductionsForYear(
       // Increment rotation index outside the loop
       rotationIndex = (rotationIndex + 14) % rotation.length;
     }
-    const maxEIDeduction = 1002.45;
+    // max amounts are for 2024
+    const maxEIDeduction = 1049.12;
+    const maxCPPDeduction = 3867.5;
     let totalEIDeduction = 0;
+    let totalCPPDeduction = 0;
+    let cppExemption = 3500 / 26;
 
     // after all the years work days have been populated, create a new array by generating work days data, and summing day Totals for each shift
     for (const [paydayDate, array] of Object.entries(data)) {
@@ -129,45 +133,60 @@ export function getEIDeductionsForYear(
         hoursWorkedInPayPeriod += dayData.baseHoursWorked!;
       }
 
-      // Calculate the EI deduction for the current pay period
-      const currentEIDeduction =
-        Number(
+      // Calculate the EI deduction for the current pay period but calculating the expected gross income minus 8.29 uniform allowance
+      let currentEIDeduction =
+        (Number(
           (80 - hoursWorkedInPayPeriod) * parseFloat(userInfo.hourlyWage) +
             paydayTotal
-        ) * 0.0163;
+        ) -
+          8.29) *
+        0.0163;
 
-      // Calculate the YTD value excluding the current entry
-      const ytdExcludingCurrent = totalEIDeduction;
+      let currentCPPDeduction =
+        (Number(
+          (80 - hoursWorkedInPayPeriod) * parseFloat(userInfo.hourlyWage) +
+            paydayTotal
+        ) -
+          8.29) *
+        0.0595;
 
-      // Check if adding the current deduction exceeds the maximum
+      // Calculate the YTD value excluding the current entry for both EI and CPP
+      const ytdEIExcludingCurrent = totalEIDeduction;
+      const ytdCPPExcludingCurrent = totalCPPDeduction;
+
+      // Check if adding the current deduction exceeds the maximum for ei and then cpp
       if (totalEIDeduction + currentEIDeduction > maxEIDeduction) {
         // Adjust the current deduction to make sure it doesn't exceed the maximum
-        const remainingDeduction = maxEIDeduction - totalEIDeduction;
-        totalEIDeduction += remainingDeduction;
-
-        // Push the current pay period data with the adjusted deduction
-        yearsEIDeductions.push({
-          currentEIDeduction: Number(remainingDeduction.toFixed(2)),
-          YTDEIDeduction: Number(ytdExcludingCurrent.toFixed(2)),
-          payDay: paydayDate,
-          grossIncome: Number(
-            (80 - hoursWorkedInPayPeriod) * parseFloat(userInfo.hourlyWage) +
-              paydayTotal
-          ),
-        });
+        currentEIDeduction = maxEIDeduction - totalEIDeduction;
+        totalEIDeduction += currentEIDeduction;
       } else {
         // Continue with the normal deduction calculation
         totalEIDeduction += currentEIDeduction;
-        yearsEIDeductions.push({
-          currentEIDeduction: Number(currentEIDeduction.toFixed(2)),
-          YTDEIDeduction: Number(ytdExcludingCurrent.toFixed(2)),
-          payDay: paydayDate,
-          grossIncome: Number(
-            (80 - hoursWorkedInPayPeriod) * parseFloat(userInfo.hourlyWage) +
-              paydayTotal
-          ),
-        });
       }
+
+      // Check if adding the current deduction exceeds the maximum for ei and then cpp
+      if (totalCPPDeduction + currentCPPDeduction > maxCPPDeduction) {
+        // Adjust the current deduction to make sure it doesn't exceed the maximum
+        currentCPPDeduction = maxCPPDeduction - totalCPPDeduction;
+        totalCPPDeduction += currentCPPDeduction;
+      } else {
+        // Continue with the normal deduction calculation
+        totalCPPDeduction += currentCPPDeduction;
+      }
+
+      // push cpp and ei deductions together
+
+      yearsEIDeductions.push({
+        currentEIDeduction: Number(currentEIDeduction.toFixed(2)),
+        YTDEIDeduction: Number(ytdEIExcludingCurrent.toFixed(2)),
+        currentCPPDeduction: Number(currentCPPDeduction.toFixed(2)),
+        YTDCPPDeduction: Number(ytdCPPExcludingCurrent.toFixed(2)),
+        payDay: paydayDate,
+        grossIncome: Number(
+          (80 - hoursWorkedInPayPeriod) * parseFloat(userInfo.hourlyWage) +
+            paydayTotal
+        ),
+      });
     }
     console.log(yearsEIDeductions);
     return yearsEIDeductions;

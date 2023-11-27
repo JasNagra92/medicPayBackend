@@ -19,6 +19,8 @@ export interface IScheduleItem {
 export interface IDeductions {
   currentEIDeduction: number;
   YTDEIDeduction: number;
+  currentCPPDeduction: number;
+  YTDCPPDeduction: number;
   payDay: string;
   grossIncome: number;
 }

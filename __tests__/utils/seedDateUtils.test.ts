@@ -1,6 +1,6 @@
 import {
   getPayPeriodFromMonthYearAndPlatoon,
-  getEIDeductionsForYear,
+  getDeductionsForYear,
 } from "../../utils/seedDateUtils";
 import { IUserDataForDB } from "../../interfaces/dbInterfaces";
 
@@ -11,7 +11,7 @@ describe("getMonthsPayPeriodsFromYearAndPlatoon", () => {
 });
 
 describe("getEIDeductionsForYear", () => {
-  it("should return an array of payDays and the corresponding EI deductions due to be taken off that pay period", () => {
+  it("should return an array of payDays and the corresponding EI and CPP deductions due to be taken off that pay period", () => {
     let userInfoFromRequest: IUserDataForDB = {
       id: "test",
       email: "test",
@@ -23,6 +23,7 @@ describe("getEIDeductionsForYear", () => {
       nightShiftEndTime: { hours: 6, minutes: 0 },
       hourlyWage: "43.13",
     };
-    let data = getEIDeductionsForYear("D", 2024, userInfoFromRequest);
+    let data = getDeductionsForYear("D", 2024, userInfoFromRequest);
+    console.log(data);
   });
 });

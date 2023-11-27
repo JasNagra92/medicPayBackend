@@ -36,12 +36,15 @@ export const getDeductions = async (
   const pserp = calculatePension(incomeLessOTLessStiip);
 
   //   ei and cpp calculations also considers uinform allowance in the function
-  const ei = calculateEI(grossIncome);
-  const cpp = calculateCpp(grossIncome);
+  let ei = calculateEI(grossIncome);
+  let cpp = calculateCpp(grossIncome);
 
   // income Tax is calculated on gross income minus the 8.29 uinform allowance and minus the pre tax deductions which are union dues and pserp contributions
   let incomeForTaxCalculation = grossIncome - 8.29 - (unionDues + pserp);
   const incomeTax = calculateTax(incomeForTaxCalculation);
+
+  // once all deductions are calculated but before they are sent back to the client, EI and CPP amounts need to be checked against YTD values in the database to ensure that the new deduction amounts when added to the YTD values, do not exceed the yearly maximums. If the amounts will exceed the maximums, the deduction amounts for EI and CPP should be reduced and returned, and the updated values should be saved in the database along with the other deduction and income figures
+
   const netIncome = grossIncome - unionDues - ei - cpp - incomeTax - pserp;
 
   res.status(200).send({

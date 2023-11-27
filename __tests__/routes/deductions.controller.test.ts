@@ -3,7 +3,7 @@ import { IUserDataForDB } from "../../interfaces/dbInterfaces";
 import app from "../../index";
 
 describe("deductionsControllerEndpoint", () => {
-  it("will have an endpoint that will take a few different types of gross income from the client, and return an object with the 5 different deductions and their amounts. Test will use client mock data from May 5th payday", async () => {
+  it("will have an endpoint that will take a few different types of income/hours from the client, and return an object with the 5 different deductions and their amounts. Test will use client mock data from May 5th payday. Endpoint should calculate EI and CPP amounts, query the database to retrieve the users YTD amounts saved for that month, and then return a EI and CPP amount that still keeps the users YTD amounts below the annual maximum", async () => {
     const testUserInfo: IUserDataForDB = {
       id: "3r342edsfserseresdf",
       email: "test",
