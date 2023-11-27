@@ -169,7 +169,7 @@ export function getEIDeductionsForYear(
         });
       }
     }
-
+    console.log(yearsEIDeductions);
     return yearsEIDeductions;
   } catch (error) {
     console.log(error + "erorr generating ei deductions");

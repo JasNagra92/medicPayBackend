@@ -82,7 +82,6 @@ export const getMonthsPayPeriodData = async (
       userInfo,
       new Date(year, month - 1)
     );
-
     res.status(200).send({ data: responseData });
   } catch (error) {
     console.error("Error in getMonthsPayPeriodData:", error);

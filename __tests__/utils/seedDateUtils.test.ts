@@ -23,7 +23,6 @@ describe("getEIDeductionsForYear", () => {
       nightShiftEndTime: { hours: 6, minutes: 0 },
       hourlyWage: "43.13",
     };
-    let data = getEIDeductionsForYear("D", 2023, userInfoFromRequest);
-    console.log(data);
+    let data = getEIDeductionsForYear("D", 2024, userInfoFromRequest);
   });
 });
