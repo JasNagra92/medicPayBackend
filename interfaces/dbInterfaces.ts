@@ -21,6 +21,9 @@ export interface IDeductions {
   YTDEIDeduction: number;
   currentCPPDeduction: number;
   YTDCPPDeduction: number;
+  incomeTax?: number;
+  pserpDeduction?: number;
+  unionDues?: number;
   payDay: string;
   grossIncome: number;
 }
@@ -139,5 +142,6 @@ export interface IRequestForDeductionData extends Request {
     OTOnePointFiveAmount?: number;
     OTDoubleTimeAmount?: number;
     incomeLessLevelling: number;
+    payDay: string;
   };
 }

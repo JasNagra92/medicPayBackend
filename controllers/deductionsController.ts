@@ -5,6 +5,7 @@ import {
   calculatePension,
   calculateTax,
   calculateUnionDues,
+  updateDeductionsInDB,
 } from "./../utils/databaseUtils";
 import { Request, Response } from "express";
 
@@ -19,6 +20,7 @@ export const getDeductions = async (
     incomeLessLevelling,
     OTDoubleTimeAmount,
     OTOnePointFiveAmount,
+    payDay,
   } = req.body;
 
   //   calculate union dues, function deducts 8.29 uniform allowance during calculations
@@ -45,13 +47,30 @@ export const getDeductions = async (
 
   // once all deductions are calculated but before they are sent back to the client, EI and CPP amounts need to be checked against YTD values in the database to ensure that the new deduction amounts when added to the YTD values, do not exceed the yearly maximums. If the amounts will exceed the maximums, the deduction amounts for EI and CPP should be reduced and returned, and the updated values should be saved in the database along with the other deduction and income figures
 
-  const netIncome = grossIncome - unionDues - ei - cpp - incomeTax - pserp;
+  let result = await updateDeductionsInDB(
+    userInfo,
+    payDay,
+    grossIncome,
+    ei,
+    pserp,
+    incomeTax,
+    unionDues,
+    cpp
+  );
+
+  const netIncome =
+    grossIncome -
+    unionDues -
+    result?.eiDeduction! -
+    result?.cppDeduction! -
+    incomeTax -
+    pserp;
 
   res.status(200).send({
     data: {
       unionDues,
-      ei,
-      cpp,
+      ei: result?.eiDeduction!,
+      cpp: result?.cppDeduction!,
       incomeTax,
       pserp,
       netIncome: Number(netIncome.toFixed(2)),
