@@ -380,8 +380,8 @@ export function generateVacationBlock(
       generateVacationShift(
         userInfo,
         { date: date.date, rotation: date.rotation },
-        date.shiftStart,
-        date.shiftEnd
+        date.shiftStart as Date,
+        date.shiftEnd as Date
       )
     );
   }

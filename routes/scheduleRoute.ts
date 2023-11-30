@@ -1,5 +1,6 @@
 import express, { Router } from "express";
 import {
+  addHolidaysToNextMonth,
   getHolidayBlock,
   getLateCallData,
   getMonthsPayPeriodData,
@@ -14,6 +15,7 @@ const router: Router = express.Router();
 
 router.post("/", getMonthsPayPeriodData);
 router.post("/addHolidayBlock", getHolidayBlock);
+router.post("/addHolidayBlockNextMonth", addHolidaysToNextMonth);
 router.post("/getDefaultDay", getSingleDaysWorkData);
 router.post("/addStiip", getWholeStiipData);
 router.post("/addPartialStiip", getPartialStiipData);

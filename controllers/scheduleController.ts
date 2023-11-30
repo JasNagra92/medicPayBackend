@@ -1,3 +1,4 @@
+import { getPayPeriodFromMonthYearAndPlatoon } from "./../utils/seedDateUtils";
 import {
   IRequestForSinglePayDayData,
   IRequestForWholeStiip,
@@ -8,7 +9,7 @@ import {
   IRequestForHolidayBlock,
 } from "./../interfaces/dbInterfaces";
 import { DateTime } from "luxon";
-import { Response } from "express";
+import { Request, Response } from "express";
 import {
   generateSingleDaysDataForClient,
   generateWholeStiipShift,
@@ -22,7 +23,6 @@ import {
   addPartialSickDayToDB,
   updateSickDaysInPayPeriod,
 } from "../utils/sickDayUtils";
-import { getPayPeriodFromMonthYearAndPlatoon } from "../utils/seedDateUtils";
 import { addWholeSickDayToDB } from "../utils/sickDayUtils";
 import {
   addLateCallToDB,
@@ -32,8 +32,6 @@ import {
   updateHolidayBlocksInPayPeriod,
 } from "../utils/overtimeUtils";
 import { addHolidayBlockToDB, removeDayFromDB } from "../utils/databaseUtils";
-import { db } from "../config/firebase";
-import format from "date-fns/format";
 
 export const getMonthsPayPeriodData = async (
   req: IRequestForPayDayData,
@@ -318,4 +316,29 @@ export const getHolidayBlock = async (
   await addHolidayBlockToDB(userInfo, vacationDates);
 
   res.status(200).send({ data: vacationBlock });
+};
+
+export const addHolidaysToNextMonth = async (req: Request, res: Response) => {
+  const { userInfo, dates, month, year, payDay } = req.body;
+
+  let data = getPayPeriodFromMonthYearAndPlatoon(userInfo.platoon, month, year);
+  let vacationDates = [];
+
+  for (const [index, date] of dates.entries()) {
+    let rotation = data[DateTime.fromISO(payDay).toISODate()!][index].rotation;
+    const singleDaysPayData = generateSingleDaysDataForClient(userInfo, {
+      date: new Date(date),
+      rotation,
+    });
+    vacationDates.push({
+      date: singleDaysPayData.date,
+      rotation: singleDaysPayData.rotation,
+      shiftStart: singleDaysPayData.shiftStart.toISOString(),
+      shiftEnd: singleDaysPayData.shiftEnd.toISOString(),
+      payDay,
+      index,
+    });
+  }
+  await addHolidayBlockToDB(userInfo, vacationDates);
+  res.status(200).send({ data: " holiday block saved" });
 };

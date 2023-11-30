@@ -118,7 +118,6 @@ export function getDeductionsForYear(
     const maxCPPDeduction = 3867.5;
     let totalEIDeduction = 0;
     let totalCPPDeduction = 0;
-    let cppExemption = 3500 / 26;
 
     // after all the years work days have been populated, create a new array by generating work days data, and summing day Totals for each shift
     for (const [paydayDate, array] of Object.entries(data)) {
@@ -188,7 +187,6 @@ export function getDeductionsForYear(
         ),
       });
     }
-    console.log(yearsEIDeductions);
     return yearsEIDeductions;
   } catch (error) {
     console.log(error + "erorr generating ei deductions");

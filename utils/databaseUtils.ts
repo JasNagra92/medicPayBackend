@@ -281,7 +281,7 @@ export const updateDeductionsInDB = async (
     let res = await db.collection("Deductions").doc(userInfo.id).update({
       deductions: updatedDeductionsArray,
     });
-    console.log(res.writeTime);
+    console.log(res.writeTime + "updated deductions");
     // return the 2 deductions that could have changed if the payday they were updated in had a YTD exceed the maximum
     return {
       eiDeduction: newEIDeduction,

@@ -1,5 +1,6 @@
 import { IRequestForDeductionData } from "../interfaces/dbInterfaces";
 import {
+  addDeductionsToDB,
   calculateCpp,
   calculateEI,
   calculatePension,
@@ -7,7 +8,8 @@ import {
   calculateUnionDues,
   updateDeductionsInDB,
 } from "./../utils/databaseUtils";
-import { Request, Response } from "express";
+import { Response } from "express";
+import { db } from "../config/firebase";
 
 export const getDeductions = async (
   req: IRequestForDeductionData,
@@ -22,6 +24,12 @@ export const getDeductions = async (
     OTOnePointFiveAmount,
     payDay,
   } = req.body;
+
+  // check if the default deductions collection has already been created for this user, if not, create it
+  let snapshot = await db.collection("Deductions").doc(userInfo.id).get();
+  if (!snapshot.exists) {
+    await addDeductionsToDB(userInfo, 2024);
+  }
 
   //   calculate union dues, function deducts 8.29 uniform allowance during calculations
   const unionDues = calculateUnionDues(incomeLessLevelling);

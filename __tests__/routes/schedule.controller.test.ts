@@ -262,4 +262,33 @@ describe("addHolidayBlock endpoint", () => {
       .send({ userInfo: testUserInfo, vacationDates });
     expect(response.body.data).toBeDefined();
   });
+  it("should have a 2nd endpoint, that takes userInfo, and a number of dates, will be between 1-3 dates. It uses the userInfo data, platoon and hourly wage, to generate a default schedule for the given month and year, check what rotation the user would normally be working on those dates given. Then saves holiday block shifts for those dates, with the previous rotation set correctly in case the user deselects those dates from the ui.", async () => {
+    const testUserInfo: IUserDataForDB = {
+      id: "3r342edsfserseresdf",
+      email: "test",
+      shiftPattern: "Alpha",
+      platoon: "A",
+      dayShiftStartTime: { hours: 6, minutes: 0 },
+      dayShiftEndTime: { hours: 18, minutes: 0 },
+      nightShiftStartTime: { hours: 18, minutes: 0 },
+      nightShiftEndTime: { hours: 6, minutes: 0 },
+      hourlyWage: "43.13",
+    };
+    // for A platoon, May 24 and 25 fall in the june pay period, and vacation can be toggle on May 22nd on the ui so 24 and 25 need to be saved in the June Month and year holidayblocks collection when this end point is sent this data, with previous rotation being set to Night 1 and Night 2 respectively
+    let dates = [new Date(2024, 4, 24), new Date(2024, 4, 25)];
+    // June 14th pay day is the pay period that will have may 24 and 25 in it, front end will have to increment payday by 14 days then send the month and year from that date not 0 indexed because function on the backend uses DateTime
+    let month = 6;
+    let year = 2024;
+    let payDay = "2024-06-14";
+    const response = await supertest(app)
+      .post("/getPayData/addHolidayBlockNextMonth")
+      .send({
+        userInfo: testUserInfo,
+        dates,
+        month,
+        year,
+        payDay,
+      });
+    console.log(response.body.data);
+  });
 });

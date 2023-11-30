@@ -128,8 +128,8 @@ export interface IRequestForHolidayBlock extends Request {
 export interface IVacationDates {
   date: Date;
   rotation: string;
-  shiftStart: Date;
-  shiftEnd: Date;
+  shiftStart: Date | string;
+  shiftEnd: Date | string;
   payDay: string;
   index: number;
 }
