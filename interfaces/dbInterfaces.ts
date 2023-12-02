@@ -37,7 +37,7 @@ export interface IUserDataForDB {
   dayShiftEndTime: IShiftTime;
   nightShiftStartTime: IShiftTime;
   nightShiftEndTime: IShiftTime;
-  Rday?: string; // R1, R2 etc //
+  rotation?: string; // R1, R2 etc //
   hourlyWage: string;
 }
 

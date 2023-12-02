@@ -27,14 +27,44 @@ const startingRotationIndex: Record<string, number> = {
   D: 6,
 };
 
+// the dates of the first Rdays for each platoon and each rotation in jan 2023, each rotation day happens every 40 days starting form these seed dates
+const RDaySeedDates: Record<string, Record<string, string>> = {
+  A: {
+    R1: "2023-01-28",
+    R2: "2023-01-12",
+    R3: "2023-02-05",
+    R4: "2023-01-20",
+  },
+  B: {
+    R1: "2023-02-07",
+    R2: "2023-01-22",
+    R3: "2023-02-06",
+    R4: "2023-01-30",
+  },
+  C: {
+    R1: "2023-02-01",
+    R2: "2023-01-08",
+    R3: "2023-02-09",
+    R4: "2023-01-16",
+  },
+  D: {
+    R1: "2023-01-02",
+    R2: "2023-01-18",
+    R3: "2023-02-10",
+    R4: "2023-01-26",
+  },
+};
+
 export const getPayPeriodFromMonthYearAndPlatoon = (
   platoon: string,
+  RDay: string,
   month: number,
   year: number
 ) => {
   try {
     let seed = DateTime.fromISO(seedDateFirstPayday);
     let payPeriodStart = DateTime.fromISO(seedDateFirstPayPeriodStart);
+    let RDaySeed = DateTime.fromISO(RDaySeedDates[platoon][RDay]);
     let data: Record<string, IScheduleItem[]> = {};
 
     // Initialize rotation index outside the loop based on the platoon
@@ -47,7 +77,13 @@ export const getPayPeriodFromMonthYearAndPlatoon = (
       if (seed.year === year && seed.month === month) {
         for (let day = 0; day < 14; day++) {
           const currentDate = payPeriodStart.plus({ days: day }).toISODate();
-          const rotationDay = rotation[(rotationIndex + day) % rotation.length];
+          let rotationDay = rotation[(rotationIndex + day) % rotation.length];
+
+          if (currentDate === RDaySeed.toISODate()) {
+            rotationDay = "R Day";
+            //  increment Rday by 40 days
+            RDaySeed = RDaySeed.plus({ days: 40 });
+          }
 
           currentPayPeriodData.push({
             date: DateTime.fromISO(currentDate!).toJSDate(),
@@ -61,7 +97,10 @@ export const getPayPeriodFromMonthYearAndPlatoon = (
       //   increment all the counters by 14
       payPeriodStart = payPeriodStart.plus({ days: 14 });
       seed = seed.plus({ days: 14 });
-
+      if (payPeriodStart > RDaySeed) {
+        //  increment Rday by 40 days
+        RDaySeed = RDaySeed.plus({ days: 40 });
+      }
       // Increment rotation index outside the loop
       rotationIndex = (rotationIndex + 14) % rotation.length;
     }

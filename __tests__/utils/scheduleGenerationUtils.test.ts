@@ -4,7 +4,6 @@ import {
   generateLateCallShift,
 } from "../../utils/scheduleGenerationUtils";
 import {
-  IScheduleItem,
   ISingleDaysPayDataForClient,
   IUserDataForDB,
 } from "../../interfaces/dbInterfaces";

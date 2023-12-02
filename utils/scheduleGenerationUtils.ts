@@ -11,7 +11,6 @@ import {
   getWeekendPremiumHoursWorked,
 } from "./hourAndMoneyUtils";
 
-// this function will loop through the pay period schedule, and create the singleDays work data for the client
 export function generatePartialStiipDaysDataForClient(
   userInfo: IUserDataForDB,
   day: IScheduleItem,
@@ -64,6 +63,7 @@ export function generatePartialStiipDaysDataForClient(
     stiipHours,
   };
 }
+// this function will loop through the pay period schedule, and create the singleDays work data for the client
 export function generateSingleDaysDataForClient(
   userInfo: IUserDataForDB,
   day: IScheduleItem
@@ -72,20 +72,29 @@ export function generateSingleDaysDataForClient(
   const shiftEnd = generateEndTimeDate(day, userInfo);
 
   const baseHoursWorked =
-    day.rotation === "day off" ? 0 : getHoursWorked(shiftStart, shiftEnd);
+    day.rotation === "day off" || day.rotation === "R Day"
+      ? 0
+      : getHoursWorked(shiftStart, shiftEnd);
+
   const nightHoursWorked =
-    day.rotation === "day off"
+    day.rotation === "day off" || day.rotation === "R Day"
       ? 0
       : getNightShiftPremiumHoursWorked(shiftStart, shiftEnd);
+
   const weekendHoursWorked =
-    day.rotation === "day off"
+    day.rotation === "day off" || day.rotation === "R Day"
       ? 0
       : getWeekendPremiumHoursWorked(shiftStart, shiftEnd);
 
-  const baseWageEarnings =
+  let baseWageEarnings =
     day.rotation === "day off"
       ? 0
       : baseHoursWorked * parseFloat(userInfo.hourlyWage);
+
+  if (day.rotation === "R Day") {
+    baseWageEarnings = 12 * parseFloat(userInfo.hourlyWage);
+  }
+
   const nightEarnings = nightHoursWorked * 2.0;
   const alphaNightsEarnings = nightHoursWorked * 3.6;
   const weekendEarnings = weekendHoursWorked * 2.25;
@@ -267,6 +276,68 @@ export function generateRegularOTShift(
     rotation: "Reg OT",
     baseHoursWorked: 0,
     baseWageEarnings: 0,
+    shiftStart,
+    shiftEnd,
+    nightHoursWorked,
+    weekendHoursWorked,
+    nightEarnings,
+    alphaNightsEarnings,
+    weekendEarnings,
+    dayTotal,
+    OTOnePointFive: Math.min(regOTHours, 12),
+    OTDoubleTime: regOTHours > 12 ? regOTHours - 12 : undefined,
+  };
+}
+
+export function generateRDayOTShift(
+  userInfo: IUserDataForDB,
+  date: Date,
+  shiftStart: Date,
+  shiftEnd: Date
+) {
+  const shiftStartForOT = new Date(shiftStart);
+  const shiftEndForOT = new Date(shiftEnd);
+
+  const regOTHours = getHoursWorked(shiftStartForOT, shiftEndForOT);
+  const baseWageEarnings = 12 * parseFloat(userInfo.hourlyWage);
+
+  // Calculate regular OT earnings for the first 12 hours
+  const first12HoursEarnings =
+    Math.min(regOTHours, 12) * (parseFloat(userInfo.hourlyWage) * 1.5);
+
+  // If regOTHours is greater than 12, calculate earnings for hours above 12 at 2.0x the hourly wage
+  const hoursAbove12Earnings =
+    regOTHours > 12
+      ? (regOTHours - 12) * (parseFloat(userInfo.hourlyWage) * 2.0)
+      : 0;
+
+  // calculate new premium values accounting for the updated shift end time
+  const nightHoursWorked = getNightShiftPremiumHoursWorked(
+    shiftStartForOT,
+    shiftEndForOT
+  );
+  const weekendHoursWorked = getWeekendPremiumHoursWorked(
+    shiftStartForOT,
+    shiftEndForOT
+  );
+
+  const nightEarnings = nightHoursWorked * 2.0;
+  const alphaNightsEarnings = nightHoursWorked * 3.6;
+  const weekendEarnings = weekendHoursWorked * 2.25;
+
+  const dayTotal =
+    baseWageEarnings +
+    alphaNightsEarnings +
+    nightEarnings +
+    weekendEarnings +
+    first12HoursEarnings +
+    hoursAbove12Earnings;
+
+  return {
+    date,
+    rotation: "R Day OT",
+    baseHoursWorked: 0,
+    baseWageEarnings,
     shiftStart,
     shiftEnd,
     nightHoursWorked,

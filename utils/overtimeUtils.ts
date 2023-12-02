@@ -10,6 +10,7 @@ import {
   generateLateCallShift,
   generateRegularOTShift,
   generateVacationShift,
+  generateRDayOTShift,
 } from "./scheduleGenerationUtils";
 
 export const addLateCallToDB = async (
@@ -71,7 +72,7 @@ export const addOvertimeToDB = async (
     } catch (error) {
       console.log(error);
     }
-  } else if (OTShift.rotation === "Recall") {
+  } else if (OTShift.rotation === "Recall" || OTShift.rotation === "R Day OT") {
     try {
       const data = {
         index,
@@ -180,6 +181,19 @@ export const updateOvertimeDaysInPayPeriod = async (
 
         if (payPeriodToUpdate) {
           payPeriodToUpdate.workDaysInPayPeriod[doc.data().index] = recallOTDay;
+        }
+      } else if (doc.data().rotation === "R Day OT") {
+        const { shiftStart, shiftEnd } = doc.data();
+
+        const RDayOTShift = generateRDayOTShift(
+          userInfo,
+          new Date(doc.id),
+          new Date(shiftStart),
+          new Date(shiftEnd)
+        );
+
+        if (payPeriodToUpdate) {
+          payPeriodToUpdate.workDaysInPayPeriod[doc.data().index] = RDayOTShift;
         }
       }
     });

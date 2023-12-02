@@ -18,6 +18,7 @@ import {
   generateRegularOTShift,
   generateHolidayRecallShift,
   generateVacationBlock,
+  generateRDayOTShift,
 } from "../utils/scheduleGenerationUtils";
 import {
   addPartialSickDayToDB,
@@ -43,6 +44,7 @@ export const getMonthsPayPeriodData = async (
 
     let data = getPayPeriodFromMonthYearAndPlatoon(
       userInfo.platoon,
+      userInfo.rotation!,
       month,
       year
     );
@@ -177,6 +179,7 @@ export const getSingleDaysWorkData = async (
   // generate months payDay data and generate single days with the default rotation
   let data = getPayPeriodFromMonthYearAndPlatoon(
     userInfo.platoon,
+    userInfo.rotation!,
     month!,
     year!
   );
@@ -250,17 +253,49 @@ export const getRegularOTShift = async (
   req: IRequestForSinglePayDayData,
   res: Response
 ) => {
-  const { userInfo, date, shiftStart, shiftEnd, index, payDay, monthAndYear } =
-    req.body;
-
-  const regularOTDay = generateRegularOTShift(
+  const {
     userInfo,
-    new Date(date),
-    shiftStart!,
-    shiftEnd!
-  );
+    date,
+    shiftStart,
+    shiftEnd,
+    index,
+    payDay,
+    monthAndYear,
+    rotation,
+  } = req.body;
 
-  await addOvertimeToDB(userInfo, regularOTDay, index!, payDay!, monthAndYear!);
+  let regularOTDay;
+
+  if (rotation === "R Day") {
+    regularOTDay = generateRDayOTShift(
+      userInfo,
+      new Date(date),
+      shiftStart!,
+      shiftEnd!
+    );
+    await addOvertimeToDB(
+      userInfo,
+      regularOTDay,
+      index!,
+      payDay!,
+      monthAndYear!,
+      "R Day"
+    );
+  } else {
+    regularOTDay = generateRegularOTShift(
+      userInfo,
+      new Date(date),
+      shiftStart!,
+      shiftEnd!
+    );
+    await addOvertimeToDB(
+      userInfo,
+      regularOTDay,
+      index!,
+      payDay!,
+      monthAndYear!
+    );
+  }
 
   res.status(200).send({ data: regularOTDay });
 };
@@ -321,7 +356,12 @@ export const getHolidayBlock = async (
 export const addHolidaysToNextMonth = async (req: Request, res: Response) => {
   const { userInfo, dates, month, year, payDay } = req.body;
 
-  let data = getPayPeriodFromMonthYearAndPlatoon(userInfo.platoon, month, year);
+  let data = getPayPeriodFromMonthYearAndPlatoon(
+    userInfo.platoon,
+    userInfo.Rday,
+    month,
+    year
+  );
   let vacationDates = [];
 
   for (const [index, date] of dates.entries()) {
