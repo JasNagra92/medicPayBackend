@@ -9,11 +9,13 @@ import {
   getRegularOTShift,
   getSingleDaysWorkData,
   getWholeStiipData,
+  deleteDayFromDB,
 } from "../controllers/scheduleController";
 
 const router: Router = express.Router();
 
 router.post("/", getMonthsPayPeriodData);
+router.post("/deleteDay", deleteDayFromDB);
 router.post("/addHolidayBlock", getHolidayBlock);
 router.post("/addHolidayBlockNextMonth", addHolidaysToNextMonth);
 router.post("/getDefaultDay", getSingleDaysWorkData);

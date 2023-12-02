@@ -342,3 +342,17 @@ export const addHolidaysToNextMonth = async (req: Request, res: Response) => {
   await addHolidayBlockToDB(userInfo, vacationDates);
   res.status(200).send({ data: " holiday block saved" });
 };
+
+export const deleteDayFromDB = async (req: Request, res: Response) => {
+  const { userInfo, collectionInDB, monthAndYear, dates } = req.body;
+  for (const date of dates) {
+    await removeDayFromDB(
+      userInfo,
+      collectionInDB,
+      monthAndYear,
+      new Date(date)
+    );
+  }
+
+  res.status(200).send({ data: " day deleted successfully" });
+};
