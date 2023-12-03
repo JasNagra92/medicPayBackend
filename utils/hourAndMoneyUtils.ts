@@ -1,4 +1,5 @@
 import { IScheduleItem, IUserDataForDB } from "../interfaces/dbInterfaces";
+import { DateTime } from "luxon";
 
 const nightShiftStartHour: number = 18;
 const nightShiftEndHour: number = 6;
@@ -371,10 +372,13 @@ export function getWeekendPremiumHoursBothWhole(
 
 // function to return total hours worked between 2 date objects
 export function getHoursWorked(startTime: Date, endTime: Date): number {
-  const startTimeMS: number = startTime.getTime();
-  const endTimeMS: number = endTime.getTime();
-  const hoursWorked: number = (endTimeMS - startTimeMS) / (1000 * 60 * 60);
-  return hoursWorked;
+  const startDateTime = DateTime.fromJSDate(startTime);
+  const endDateTime = DateTime.fromJSDate(endTime);
+
+  const diffInHours = endDateTime.diff(startDateTime, "hours").hours;
+
+  // Round to two decimal places
+  return parseFloat(diffInHours.toFixed(2));
 }
 
 // function to return a start time as date object when given a schedule item and a user info object. Schedule item will decide if a start date is to be generated using the day shift start times or the night shift start times from the user info object

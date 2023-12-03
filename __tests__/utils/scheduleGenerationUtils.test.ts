@@ -42,6 +42,106 @@ describe("generateSingleDaysDataForClient", () => {
       generateSingleDaysDataForClient(userInfoFromRequest, testScheduleItem)
     ).toHaveProperty("dayTotal");
   });
+  it("when given a userInfo from client, and a schedule item which includes a date, should generate a single pays data, for this test the day will take place during a statutory holiday, so shift start and end will both be within the stat pay accruing days. This will reduce base hours worked to 0, and instead have the 12 hours under the OTDoubleTime property of the days pay data", () => {
+    let userInfoFromRequest: IUserDataForDB = {
+      id: "test",
+      email: "test",
+      shiftPattern: "Alpha",
+      platoon: "C",
+      rotation: "R1",
+      dayShiftStartTime: { hours: 6, minutes: 0 },
+      dayShiftEndTime: { hours: 18, minutes: 0 },
+      nightShiftStartTime: { hours: 18, minutes: 0 },
+      nightShiftEndTime: { hours: 6, minutes: 0 },
+      hourlyWage: "43.13",
+    };
+    // C Platoon R1 works a day shift on Feb 20th, so the entire 12 hour shift should accrue stat pay, with baseHoursWorked being 0 so the levelling is still accurate
+    let testScheduleItem = {
+      date: new Date(2024, 1, 20),
+      rotation: "Day 1",
+    };
+    let singleDaysPayData = generateSingleDaysDataForClient(
+      userInfoFromRequest,
+      testScheduleItem
+    );
+    expect(singleDaysPayData.OTStatReg).toEqual(12);
+    expect(singleDaysPayData.baseHoursWorked).toEqual(0);
+  });
+  it("when given a userinfo and shedule item that correlates to a user who started a night shift the day before the stat, and finished on the stat with whole starts, eg 1800-0600, 6 hours should be under baseHoursWorked, and 6 hours should be under the OTStatReg property, with 6 hours of premiums", () => {
+    let userInfoFromRequest: IUserDataForDB = {
+      id: "test",
+      email: "test",
+      shiftPattern: "Alpha",
+      platoon: "A",
+      rotation: "R1",
+      dayShiftStartTime: { hours: 6, minutes: 0 },
+      dayShiftEndTime: { hours: 18, minutes: 0 },
+      nightShiftStartTime: { hours: 18, minutes: 0 },
+      nightShiftEndTime: { hours: 6, minutes: 0 },
+      hourlyWage: "43.13",
+    };
+    // A Platoon R1 works a night shift on Feb 19th, so first 6 hours of the shift should accrue base pay, with baseHoursWorked being 6 so the levelling is still accurate and OTStatReg should be 6
+    let testScheduleItem = {
+      date: new Date(2024, 1, 19),
+      rotation: "Night 2",
+    };
+    let singleDaysPayData = generateSingleDaysDataForClient(
+      userInfoFromRequest,
+      testScheduleItem
+    );
+    expect(singleDaysPayData.OTStatReg).toEqual(6);
+    expect(singleDaysPayData.baseHoursWorked).toEqual(6);
+  });
+  it("when given fractional start time and whole end time, with the shift starting not on a stat and ending on a stat, the base hours worked should be 5.5 and the otstatreg should be 6", () => {
+    let userInfoFromRequest: IUserDataForDB = {
+      id: "test",
+      email: "test",
+      shiftPattern: "Alpha",
+      platoon: "A",
+      rotation: "R1",
+      dayShiftStartTime: { hours: 6, minutes: 0 },
+      dayShiftEndTime: { hours: 18, minutes: 0 },
+      nightShiftStartTime: { hours: 18, minutes: 30 },
+      nightShiftEndTime: { hours: 6, minutes: 0 },
+      hourlyWage: "43.13",
+    };
+    // A Platoon R1 works a night shift on Feb 19th, so first 6 hours of the shift should accrue base pay, with baseHoursWorked being 6 so the levelling is still accurate and OTStatReg should be 6
+    let testScheduleItem = {
+      date: new Date(2024, 1, 19),
+      rotation: "Night 2",
+    };
+    let singleDaysPayData = generateSingleDaysDataForClient(
+      userInfoFromRequest,
+      testScheduleItem
+    );
+    expect(singleDaysPayData.OTStatReg).toEqual(6);
+    expect(singleDaysPayData.baseHoursWorked).toEqual(5.5);
+  });
+  it("if the shift has a whole start time but fractional end time, with shift starting not on a stat holiday but ending on a stat holiday, then basehours should be 6 and stat pay should be 5.5", () => {
+    let userInfoFromRequest: IUserDataForDB = {
+      id: "test",
+      email: "test",
+      shiftPattern: "Alpha",
+      platoon: "A",
+      rotation: "R1",
+      dayShiftStartTime: { hours: 6, minutes: 0 },
+      dayShiftEndTime: { hours: 18, minutes: 0 },
+      nightShiftStartTime: { hours: 18, minutes: 0 },
+      nightShiftEndTime: { hours: 5, minutes: 30 },
+      hourlyWage: "43.13",
+    };
+    // A Platoon R1 works a night shift on Feb 19th, so first 6 hours of the shift should accrue base pay, with baseHoursWorked being 6 so the levelling is still accurate and OTStatReg should be 6
+    let testScheduleItem = {
+      date: new Date(2024, 1, 19),
+      rotation: "Night 2",
+    };
+    let singleDaysPayData = generateSingleDaysDataForClient(
+      userInfoFromRequest,
+      testScheduleItem
+    );
+    expect(singleDaysPayData.OTStatReg).toEqual(5.5);
+    expect(singleDaysPayData.baseHoursWorked).toEqual(6);
+  });
 });
 
 describe("generateWholeStiipShift", () => {

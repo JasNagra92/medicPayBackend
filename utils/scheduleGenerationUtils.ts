@@ -10,6 +10,134 @@ import {
   getNightShiftPremiumHoursWorked,
   getWeekendPremiumHoursWorked,
 } from "./hourAndMoneyUtils";
+import { DateTime } from "luxon";
+
+export const statDays2024 = [
+  "2024-01-01",
+  "2024-02-19",
+  "2024-03-29",
+  "2024-05-20",
+  "2024-07-01",
+  "2024-08-05",
+  "2024-09-02",
+  "2024-09-30",
+  "2024-10-14",
+  "2024-11-11",
+  "2024-12-25",
+];
+
+function isOnStatDay(jsDate: Date): boolean {
+  const dateToCheck = DateTime.fromJSDate(jsDate);
+
+  // Check if the date falls on any of the stat days
+  const isOnStatDay = statDays2024.some((statDay) => {
+    const statDayDateTime = DateTime.fromISO(statDay);
+    return (
+      dateToCheck >= statDayDateTime.startOf("day") &&
+      dateToCheck < statDayDateTime.endOf("day")
+    );
+  });
+
+  return isOnStatDay;
+}
+
+export function isWholeShiftOnStatDay(
+  userInfo: IUserDataForDB,
+  day: IScheduleItem
+) {
+  const shiftStart = generateStartTimeDate(day, userInfo);
+  const shiftEnd = generateEndTimeDate(day, userInfo);
+  let shiftStartDay = DateTime.fromJSDate(shiftStart);
+  let shiftEndDay = DateTime.fromJSDate(shiftEnd);
+
+  // Check if shift starts and ends on any of the stat days representing the whole shift took place on a stat
+  const isOnStatDay = statDays2024.some((statDay) => {
+    const statDayDateTime = DateTime.fromISO(statDay);
+    return (
+      shiftStartDay.hasSame(statDayDateTime, "day") &&
+      shiftEndDay.hasSame(statDayDateTime, "day")
+    );
+  });
+
+  return isOnStatDay;
+}
+// function to check if a shift starts the day before a stat and ends on a stat, will need to handle this case seperately and count hours correctly
+export function isShiftOnStatDay(userInfo: IUserDataForDB, day: IScheduleItem) {
+  const shiftStart = generateStartTimeDate(day, userInfo);
+  const shiftEnd = generateEndTimeDate(day, userInfo);
+  let shiftStartDay = DateTime.fromJSDate(shiftStart);
+  let shiftEndDay = DateTime.fromJSDate(shiftEnd);
+
+  // Check if shift starts or ends on any of the stat days
+  const isOnStatDay = statDays2024.some((statDay) => {
+    const statDayDateTime = DateTime.fromISO(statDay);
+    return (
+      shiftStartDay.hasSame(statDayDateTime, "day") ||
+      shiftEndDay.hasSame(statDayDateTime, "day")
+    );
+  });
+
+  return isOnStatDay;
+}
+
+export function getHoursWorkedWithStatPremium(
+  userInfo: IUserDataForDB,
+  day: IScheduleItem
+): { baseHoursWorked: number; OTStatReg: number } {
+  const shiftStart = generateStartTimeDate(day, userInfo);
+  const shiftEnd = generateEndTimeDate(day, userInfo);
+  const hoursWorked = getHoursWorked(shiftStart, shiftEnd);
+
+  let baseHoursWorked = 0;
+  let OTStatReg = 0;
+
+  // Extract fractions from start and end times
+  const startFraction = shiftStart.getMinutes() / 60;
+  const endFraction = shiftEnd.getMinutes() / 60;
+
+  // Handle fractional start
+  if (startFraction > 0) {
+    // Check if the start hour is on a stat day
+    if (isOnStatDay(shiftStart)) {
+      OTStatReg += startFraction;
+    } else {
+      baseHoursWorked += 1 - startFraction;
+    }
+  }
+
+  // Handle fractional end
+  if (endFraction > 0) {
+    // Check if the end hour is on a stat day
+    if (isOnStatDay(shiftEnd)) {
+      OTStatReg += endFraction;
+    } else {
+      baseHoursWorked += endFraction;
+    }
+  }
+
+  // Iterate through each hour of the shift
+  for (
+    let currentHour = startFraction > 0 ? 1 : 0;
+    currentHour < (endFraction > 0 ? hoursWorked - 1 : hoursWorked);
+    currentHour++
+  ) {
+    const currentHourDateTime = DateTime.fromJSDate(shiftStart).plus({
+      hour: currentHour,
+    });
+
+    // Check if the current hour is on a stat day
+    let result = isOnStatDay(currentHourDateTime.toJSDate());
+
+    // Increment counters based on whether the current hour is on the stat or not
+    if (result) {
+      OTStatReg += 1;
+    } else {
+      baseHoursWorked += 1; // Increment base hours for non-stat day
+    }
+  }
+
+  return { baseHoursWorked, OTStatReg };
+}
 
 export function generatePartialStiipDaysDataForClient(
   userInfo: IUserDataForDB,
@@ -71,10 +199,24 @@ export function generateSingleDaysDataForClient(
   const shiftStart = generateStartTimeDate(day, userInfo);
   const shiftEnd = generateEndTimeDate(day, userInfo);
 
-  const baseHoursWorked =
+  let OTStatReg = 0;
+  let baseHoursWorked =
     day.rotation === "day off" || day.rotation === "R Day"
       ? 0
       : getHoursWorked(shiftStart, shiftEnd);
+
+  if (day.rotation !== "day off") {
+    if (isWholeShiftOnStatDay(userInfo, day)) {
+      // if the entire shift took place on a stat day, the base hours variable will be 0 in order to reduce levelling, and instead of directly increasing levelling, the levelling calculation on the front end will add the OTStatReg variable hours into the equation
+      OTStatReg = baseHoursWorked;
+      baseHoursWorked = 0;
+    } else if (isShiftOnStatDay(userInfo, day)) {
+      ({ baseHoursWorked, OTStatReg } = getHoursWorkedWithStatPremium(
+        userInfo,
+        day
+      ));
+    }
+  }
 
   const nightHoursWorked =
     day.rotation === "day off" || day.rotation === "R Day"
@@ -105,7 +247,8 @@ export function generateSingleDaysDataForClient(
       : baseWageEarnings +
         alphaNightsEarnings +
         nightEarnings +
-        weekendEarnings;
+        weekendEarnings +
+        OTStatReg * (parseFloat(userInfo.hourlyWage) * 2);
 
   return {
     date: day.date,
@@ -113,6 +256,7 @@ export function generateSingleDaysDataForClient(
     shiftStart,
     shiftEnd,
     baseHoursWorked,
+    OTStatReg,
     nightHoursWorked,
     weekendHoursWorked,
     baseWageEarnings,
