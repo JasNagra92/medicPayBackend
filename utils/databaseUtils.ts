@@ -6,6 +6,15 @@ import {
 import { db } from "../config/firebase";
 import { getDeductionsForYear } from "./seedDateUtils";
 
+export const saveUserToDB = async (user: IUserDataForDB) => {
+  try {
+    let res = await db.collection("users").doc(user.id).set(user);
+    console.log("saved user successfully");
+  } catch (error) {
+    console.log("error saving user to db");
+  }
+};
+
 export const calculateTax = (grossIncome: number) => {
   function calculateFederalTax(annualTaxableIncome: number) {
     let taxRateFed, constantFed;
@@ -34,12 +43,13 @@ export const calculateTax = (grossIncome: number) => {
 
     return { taxRateFed, constantFed };
   }
+
   let annualTaxableIncome = grossIncome * 26;
   let { taxRateFed, constantFed } = calculateFederalTax(annualTaxableIncome);
 
-  // max ei and cpp amounts are 1049.12 and 3867.50 for 2024, the canada employment amount still had 1368.00 as of last check on Nov 27th 2023
+  // max ei and cpp amounts are 1049.12 and 3867.50 for 2024, the canada employment amount still had 1368.00 as of last check on Nov 27th 2023. Max CPP contributions in this formula are actually the Base CPP contribution which is calculated by maxCPP * (.0495/.0595), so max in 2023 was 3754.45 which led to a max base amount of 3123.45. 2024 numbers will be different
   let fedTax = annualTaxableIncome * taxRateFed - constantFed;
-  let fedTaxCredits = (15000 + 3867.5 + 1049.12 + 1368.0) * 0.15;
+  let fedTaxCredits = (15000 + 3217.5 + 1049.12 + 1368.0) * 0.15;
   let fedTaxPayable = (fedTax - fedTaxCredits) / 26;
 
   function calculateProvincialTax(annualTaxableIncome: number) {
@@ -83,7 +93,7 @@ export const calculateTax = (grossIncome: number) => {
 
   // change to ei and cpp max amounts here as well
   let provTax = annualTaxableIncome * taxRateProv - constantProv;
-  let provTaxCredits = (11981 + 3867.5 + 1049.12) * 0.0506;
+  let provTaxCredits = (11981 + 3217.5 + 1049.12) * 0.0506;
   let provTaxPayable = (provTax - provTaxCredits) / 26;
 
   // use online calculator, total cash income is gross - 8.29 for uinform allowance, calculator gives you accurate tax deduction. Non-cash insurable for EI is 24.80. Ei deduction uses gross income minus 8.29 uniform allowance and is multiplied by 1.63%, calculator also accurately gives you cpp value. Union dues are calculated off actual hours worked * 2.1%, and pserp deduction is 80 hours plus premiums and no overtime added multiplied by 8.35% pserp for jan 1, was stat pay but superstat was not pensionable, and deduct uniform allowance

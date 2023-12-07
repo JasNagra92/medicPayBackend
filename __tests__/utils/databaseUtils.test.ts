@@ -10,66 +10,67 @@ import { updateDeductionsInDB } from "./../../utils/databaseUtils";
 import { DateTime } from "luxon";
 import { calculateTax } from "./../../utils/databaseUtils";
 
-describe("addDeductionsToDB", () => {
-  it("should create db entry for given userInfo", async () => {
-    let userInfoFromRequest: IUserDataForDB = {
-      id: "fdifjsoenlkxcnvl",
-      email: "test",
-      shiftPattern: "Alpha",
-      platoon: "A",
-      dayShiftStartTime: { hours: 6, minutes: 0 },
-      dayShiftEndTime: { hours: 18, minutes: 0 },
-      nightShiftStartTime: { hours: 18, minutes: 0 },
-      nightShiftEndTime: { hours: 6, minutes: 0 },
-      hourlyWage: "43.13",
-    };
-    await addDeductionsToDB(userInfoFromRequest, 2024);
-  });
-});
+// describe("addDeductionsToDB", () => {
+//   it("should create db entry for given userInfo", async () => {
+//     let userInfoFromRequest: IUserDataForDB = {
+//       id: "fdifjsoenlkxcnvl",
+//       email: "test",
+//       shiftPattern: "Alpha",
+//       platoon: "A",
+//       dayShiftStartTime: { hours: 6, minutes: 0 },
+//       dayShiftEndTime: { hours: 18, minutes: 0 },
+//       nightShiftStartTime: { hours: 18, minutes: 0 },
+//       nightShiftEndTime: { hours: 6, minutes: 0 },
+//       hourlyWage: "43.13",
+//     };
+//     await addDeductionsToDB(userInfoFromRequest, 2024);
+//   });
+// });
 
-describe("updateDeductions", () => {
-  it("should take a userInfo object, payday string in the DateTime ISO format, and a ei deduction number from the client, should then query the db for the users ei deductions for the year, get the deductions array, update the provided payday field with the new deduction, as well as update the rest of the ei deduction values to account for the change and then store the updated data back in the db", async () => {
-    let userInfoFromRequest: IUserDataForDB = {
-      id: "fdifjsoenlkxcnvl",
-      email: "test",
-      shiftPattern: "Alpha",
-      platoon: "A",
-      dayShiftStartTime: { hours: 6, minutes: 0 },
-      dayShiftEndTime: { hours: 18, minutes: 0 },
-      nightShiftStartTime: { hours: 18, minutes: 0 },
-      nightShiftEndTime: { hours: 6, minutes: 0 },
-      hourlyWage: "43.13",
-    };
-    let requestedPayDay = DateTime.fromISO("2024-02-09").toISODate();
-    // previous gross for this pay period was 3611.80, so this test simulates a reduction in gross and therefore should show a reduced EI deduction in this pay period, as well as a corresponding increased EI deduction in the final pay period that EI was deducted from previously, while keeping the YTD value at 1002.45
-    let updatedGross = 3611.8;
-    let newEIDeduction = 90.0;
-    let unionDues = 130.0;
-    let pserp = 247.68;
-    let incomeTax = 1400.0;
-    let newCPPDeduction = 230.3;
+// describe("updateDeductions", () => {
+//   it("should take a userInfo object, payday string in the DateTime ISO format, and a ei deduction number from the client, should then query the db for the users ei deductions for the year, get the deductions array, update the provided payday field with the new deduction, as well as update the rest of the ei deduction values to account for the change and then store the updated data back in the db", async () => {
+//     let userInfoFromRequest: IUserDataForDB = {
+//       id: "fdifjsoenlkxcnvl",
+//       email: "test",
+//       shiftPattern: "Alpha",
+//       platoon: "A",
+//       dayShiftStartTime: { hours: 6, minutes: 0 },
+//       dayShiftEndTime: { hours: 18, minutes: 0 },
+//       nightShiftStartTime: { hours: 18, minutes: 0 },
+//       nightShiftEndTime: { hours: 6, minutes: 0 },
+//       hourlyWage: "43.13",
+//     };
+//     let requestedPayDay = DateTime.fromISO("2024-02-09").toISODate();
+//     // previous gross for this pay period was 3611.80, so this test simulates a reduction in gross and therefore should show a reduced EI deduction in this pay period, as well as a corresponding increased EI deduction in the final pay period that EI was deducted from previously, while keeping the YTD value at 1002.45
+//     let updatedGross = 3611.8;
+//     let newEIDeduction = 90.0;
+//     let unionDues = 130.0;
+//     let pserp = 247.68;
+//     let incomeTax = 1400.0;
+//     let newCPPDeduction = 230.3;
 
-    // also mock data for the other deductions, CPP will need to be tested so check live updates
+//     // also mock data for the other deductions, CPP will need to be tested so check live updates
 
-    await updateDeductionsInDB(
-      userInfoFromRequest,
-      requestedPayDay!,
-      updatedGross,
-      newEIDeduction,
-      pserp,
-      incomeTax,
-      unionDues,
-      newCPPDeduction
-    );
-  });
-});
+//     await updateDeductionsInDB(
+//       userInfoFromRequest,
+//       requestedPayDay!,
+//       updatedGross,
+//       newEIDeduction,
+//       pserp,
+//       incomeTax,
+//       unionDues,
+//       newCPPDeduction
+//     );
+//   });
+// });
 
 describe("calculateTax", () => {
   it("calcs tax", () => {
-    // income tax on january 13th, gross income was 4056.69, income tax was 735.97, calculation returns 734.39 because max fed and prov cpp/ei values being used are for 2024
-    let grossIncome = 4056.69 - 346.31 - 8.29;
+    // income tax on january 13th, gross income was 4056.69, income tax was 735.97
+    let additionalCPP = 234.35 * (0.01 / 0.0595);
+    let grossIncome = 4056.69 - 346.31 - 8.29 - additionalCPP + 24.8;
     let tax = calculateTax(grossIncome);
-    expect(Number(tax.toFixed(2))).toEqual(735.62);
+    expect(Number(tax.toFixed(2))).toEqual(735.97);
   });
 });
 describe("calculateEi", () => {

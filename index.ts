@@ -2,6 +2,7 @@ import express, { Express, Request, Response } from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import bodyParser from "body-parser";
+import usersRoute from "./routes/userRoute";
 import getTwoWeekDataRoute from "./routes/scheduleRoute";
 import getDeductionsRoute from "./routes/deductionsRoute";
 
@@ -17,7 +18,7 @@ app.use(bodyParser.json());
 app.get("/", (req: Request, res: Response) => {
   res.send("Express + Typescript Server test to see nodemon");
 });
-
+app.use("/users", usersRoute);
 app.use("/getPayData", getTwoWeekDataRoute);
 app.use("/getDeductions", getDeductionsRoute);
 

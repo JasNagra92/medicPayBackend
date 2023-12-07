@@ -144,5 +144,6 @@ export interface IRequestForDeductionData extends Request {
     OTDoubleTimeAmount?: number;
     incomeLessLevelling: number;
     payDay: string;
+    OTStatReg?: number;
   };
 }
