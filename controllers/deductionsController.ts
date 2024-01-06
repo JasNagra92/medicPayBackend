@@ -43,6 +43,8 @@ export const getDeductions = async (
     (OTOnePointFiveAmount ? OTOnePointFiveAmount : 0) -
     (OTDoubleTimeAmount ? OTDoubleTimeAmount : 0) -
     (OTStatReg ? OTStatReg * parseFloat(userInfo.hourlyWage) : 0);
+  // factor in super stat for new years and christmas - todo
+
   const additionForPserp = stiipHours * parseFloat(userInfo.hourlyWage);
   incomeLessOTLessStiip = incomeLessOTLessStiip + additionForPserp;
   const pserp = calculatePension(incomeLessOTLessStiip);

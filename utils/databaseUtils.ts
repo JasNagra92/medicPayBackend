@@ -100,7 +100,8 @@ export const calculateTax = (grossIncome: number) => {
   return Number((fedTaxPayable + provTaxPayable).toFixed(2));
 };
 export const calculateEI = (grossIncome: number) => {
-  let eiDeduction = (grossIncome - 8.29) * 0.0163;
+  let eiDeductionRate = 0.0166;
+  let eiDeduction = (grossIncome - 8.29) * eiDeductionRate;
   return Number(eiDeduction.toFixed(2));
 };
 export const calculateCpp = (grossIncome: number) => {
@@ -174,7 +175,12 @@ export const addDeductionsToDB = async (
   userInfo: IUserDataForDB,
   year: number
 ) => {
-  let data = getDeductionsForYear(userInfo.platoon, year, userInfo);
+  let data = getDeductionsForYear(
+    userInfo.platoon,
+    userInfo.rotation!,
+    year,
+    userInfo
+  );
 
   try {
     let res = await db
