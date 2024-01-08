@@ -208,6 +208,7 @@ export const updateDeductionsInDB = async (
     let doc = await db.collection("Deductions").doc(userInfo.id).get();
     let deductions: IDeductions[] = doc.data()!.deductions;
     let foundPayDay = false;
+    const maxEIDeduction = 1049.12;
 
     let updatedDeductionsArray = deductions.map(
       (deduction: IDeductions, index: number) => {
@@ -218,8 +219,8 @@ export const updateDeductionsInDB = async (
           deduction.unionDues = unionDues;
           deduction.pserpDeduction = pserp;
 
-          // Check if the new deduction, when added to YTD, exceeds the maximum
-          if (deduction.YTDEIDeduction + newEIDeduction > 1049.12) {
+          // Check if the new deduction, when added to YTD, exceeds the maximum for EI
+          if (deduction.YTDEIDeduction + newEIDeduction > maxEIDeduction) {
             // Adjust the new deduction to make sure it doesn't exceed the maximum
             deduction.currentEIDeduction = 1049.12 - deduction.YTDEIDeduction;
             // update the newEIDeduction variable to this new reduced value, so it can be returned when this function is called and the new reduced value sent back to the client
@@ -229,7 +230,7 @@ export const updateDeductionsInDB = async (
             deduction.currentEIDeduction = newEIDeduction;
           }
 
-          // Check if the new deduction, when added to YTD, exceeds the maximum
+          // Check if the new deduction, when added to YTD, exceeds the maximum for CPP
           if (deduction.YTDCPPDeduction + newCPPDeduction > 3867.5) {
             // Adjust the new deduction to make sure it doesn't exceed the maximum
             deduction.currentCPPDeduction = 3867.5 - deduction.YTDCPPDeduction;
@@ -261,10 +262,11 @@ export const updateDeductionsInDB = async (
           // Check if the old deduction, when added to the new YTD, exceeds the maximum
           if (
             deduction.YTDEIDeduction + deduction.currentEIDeduction >
-            1049.12
+            maxEIDeduction
           ) {
             // Adjust the deduction to make sure it doesn't exceed the maximum
-            deduction.currentEIDeduction = 1049.12 - deduction.YTDEIDeduction;
+            deduction.currentEIDeduction =
+              maxEIDeduction - deduction.YTDEIDeduction;
           }
 
           // Check if the deduction, when added to the updated YTD, exceeds the maximum

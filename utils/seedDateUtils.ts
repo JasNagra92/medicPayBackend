@@ -225,15 +225,10 @@ export function getDeductionsForYear(
       cumulativeYTDIncome = currentYTDIncome;
 
       // Calculate the EI deduction for the current pay period but calculating the expected gross income minus 8.29 uniform allowance
-      let currentEIDeduction =
-        (Number(
-          (80 - hoursWorkedInPayPeriod) * parseFloat(userInfo.hourlyWage) +
-            paydayTotal
-        ) -
-          8.29) *
-        eiRate2024;
+      let currentEIDeduction = currentGrossIncome * eiRate2024;
 
       let cppExemption = 3500 / 26;
+      // will need to add 24.80 if the payday is first payday of the month
       let currentCPPDeduction =
         (currentGrossIncome - cppExemption) * cppRate2024;
 

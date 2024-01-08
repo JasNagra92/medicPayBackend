@@ -51,11 +51,14 @@ export const getDeductions = async (
 
   //   ei and cpp calculations also considers uinform allowance in the function
   let ei = calculateEI(grossIncome);
+
+  // this cpp figure also needs to not take gross income but instead take gross minus 8.29 and plus 24.8 if the payday is the first payday of the month
   let cpp = calculateCpp(grossIncome);
 
   // income Tax is calculated on gross income minus the 8.29 uinform allowance and minus the pre tax deductions which are union dues and pserp contributions
   let additionalCPP = cpp * (0.01 / 0.0595);
 
+  // incomeForTaxCalculation needs to only add 24.8 on the first payday of every month, not every payday
   let incomeForTaxCalculation =
     grossIncome - 8.29 - (unionDues + pserp) + 24.8 - additionalCPP;
   const incomeTax = calculateTax(incomeForTaxCalculation);
