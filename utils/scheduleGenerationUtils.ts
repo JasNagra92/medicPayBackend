@@ -162,8 +162,13 @@ export function generatePartialStiipDaysDataForClient(
 
   const baseWageEarnings = baseHoursWorked * parseFloat(userInfo.hourlyWage);
   const nightEarnings = nightHoursWorked * 2.0;
-  const alphaNightsEarnings = nightHoursWorked * 3.6;
+
+  let alphaNightsEarnings;
+  alphaNightsEarnings =
+    userInfo.shiftPattern === "Alpha" ? nightHoursWorked * 3.6 : 0;
+
   const weekendEarnings = weekendHoursWorked * 2.25;
+
   const stiipHours =
     (originalShiftEndForStiip.getTime() - shiftEndForStiip.getTime()) /
     (1000 * 60 * 60);

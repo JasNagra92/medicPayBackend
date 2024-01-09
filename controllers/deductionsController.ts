@@ -13,6 +13,7 @@ import {
 } from "./../utils/databaseUtils";
 import { Response } from "express";
 import { db } from "../config/firebase";
+import { DateTime } from "luxon";
 
 export const getDeductions = async (
   req: IRequestForDeductionData,
@@ -74,7 +75,6 @@ export const getDeductions = async (
     if (foundDeduction.YTDCPPDeduction < cppCeilingOne) {
       // calculate a cpp deduction using the first rate minus the exemption
       cppDeduction = (grossIncome - cppExemption) * cppRateOne2024;
-      console.log(cppDeduction);
       // this needs to be checked to see if adding it to the YTD value causes it to exceed the first ceiling
       if (foundDeduction.YTDCPPDeduction + cppDeduction > cppCeilingOne) {
         // in this case it needs to be reduced and the untaxed income needs to be taxed using the second CPP rate
@@ -122,9 +122,17 @@ export const getDeductions = async (
   // income Tax is calculated on gross income minus the 8.29 uinform allowance and minus the pre tax deductions which are union dues and pserp contributions
   let additionalCPP = cppDeduction * (0.01 / 0.0595) + secondCPPDeduction;
 
+  // calculate the day of the payday and if it is the first payday of the month,
+  const payDayDateTime = DateTime.fromISO(payDay);
+  const day = payDayDateTime.day;
+
   // incomeForTaxCalculation needs to only add 24.8 on the first payday of every month, not every payday
   let incomeForTaxCalculation =
-    grossIncome - 8.29 - (unionDues + pserp) + 24.8 - additionalCPP;
+    grossIncome -
+    8.29 -
+    (unionDues + pserp) -
+    additionalCPP +
+    (day <= 14 ? 24.8 : 0);
   const incomeTax = calculateTax(incomeForTaxCalculation);
 
   // once all deductions are calculated but before they are sent back to the client, EI needs to be checked against YTD values in the database to ensure that the new deduction amount when added to the YTD values, does not exceed the yearly maximum. If the amount will exceed the maximum, the deduction amount for EI should be reduced and returned, and the updated value should be saved in the database along with the other deduction and income figures. The updateDeductionsInDB was also validating CPP figures previously but that is now handled prior to sending the CPP and secondCPP figures to the db, so the only thing the updateDeductionsInDB needs to do regarding CPP is update all the following entries with new YTD values and the last deductions object that gets updated with a new value needs to make sure that it does not exceed the maximum
@@ -146,8 +154,9 @@ export const getDeductions = async (
     unionDues -
     result?.eiDeduction! -
     cppDeduction -
-    secondCPPDeduction;
-  incomeTax - pserp;
+    secondCPPDeduction -
+    incomeTax -
+    pserp;
 
   res.status(200).send({
     data: {

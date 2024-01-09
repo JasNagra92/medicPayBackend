@@ -290,7 +290,7 @@ export const updateDeductionsInDB = async (
             // reduce the current step 1 deduction to 0
             deduction.currentCPPDeduction = 0;
 
-            // calculate a 2nd cpp deduction from the gross income - which will need to account for the 24.80 that is every first payperiod
+            // calculate a 2nd cpp deduction from the gross income
             secondCPPDeduction = deduction.grossIncome * cppRateTwo2024;
             // now validate it to make sure it doesn't exceed the second ceiling
             if (
@@ -344,13 +344,6 @@ export const updateDeductionsInDB = async (
                 deduction.YTDCPPDeduction +
                 deduction.currentCPPDeduction +
                 deduction.secondCPPDeduction;
-              console.log(deduction.payDay + " this is the PayDay");
-              console.log(
-                deduction.YTDCPPDeduction + " this is the YTDDeduction"
-              );
-              console.log(
-                deduction.secondCPPDeduction + " this is the second Deduciton"
-              );
             }
           }
 
@@ -366,7 +359,7 @@ export const updateDeductionsInDB = async (
     let res = await db.collection("Deductions").doc(userInfo.id).update({
       deductions: updatedDeductionsArray,
     });
-    console.log(res.writeTime + "updated deductions");
+    console.log(res.writeTime + " updated deductions - this is the writeTime");
     // return the 2 deductions that could have changed if the payday they were updated in had a YTD exceed the maximum
     return {
       eiDeduction: newEIDeduction,
