@@ -235,6 +235,8 @@ export function getDeductionsForYear(
       // Calculate the YTD value excluding the current entry for both EI and CPP
       const ytdEIExcludingCurrent = totalEIDeduction;
       const ytdCPPExcludingCurrent = totalCPPDeduction;
+      const ytdCPPIncludingSecondExcludingCurrent =
+        totalCPPDeductionIncludingSecond;
 
       // Check if adding the current deduction exceeds the maximum for ei and then cpp
       if (totalEIDeduction + currentEIDeduction > maxEIDeduction) {
@@ -303,7 +305,9 @@ export function getDeductionsForYear(
         grossIncome: Number(currentGrossIncome.toFixed(2)),
         YTDIncome: Number(currentYTDIncome.toFixed(2)),
         secondCPPDeduction,
-        totalCPPDeductionIncludingSecond,
+        totalCPPDeductionIncludingSecond: Number(
+          ytdCPPIncludingSecondExcludingCurrent.toFixed(2)
+        ),
       });
     }
     return yearsEIDeductions;

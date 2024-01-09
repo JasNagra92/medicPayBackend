@@ -26,9 +26,9 @@ export interface IDeductions {
   unionDues?: number;
   payDay: string;
   grossIncome: number;
-  YTDIncome: Number;
-  secondCPPDeduction: Number;
-  totalCPPDeductionIncludingSecond: Number;
+  YTDIncome: number;
+  secondCPPDeduction: number;
+  totalCPPDeductionIncludingSecond: number;
 }
 
 export interface IUserDataForDB {

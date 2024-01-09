@@ -202,13 +202,19 @@ export const updateDeductionsInDB = async (
   pserp: number,
   incomeTax: number,
   unionDues: number,
-  newCPPDeduction: number
+  cppDeduction: number,
+  secondCPPDeduction: number
 ) => {
   try {
     let doc = await db.collection("Deductions").doc(userInfo.id).get();
     let deductions: IDeductions[] = doc.data()!.deductions;
     let foundPayDay = false;
     const maxEIDeduction = 1049.12;
+    let cppExemption = 3500 / 26;
+    let cppCeilingOne = 3867.5;
+    let cppCeilingTwo = 4055.5;
+    let cppRateOne2024 = 0.0595;
+    let cppRateTwo2024 = 0.04;
 
     let updatedDeductionsArray = deductions.map(
       (deduction: IDeductions, index: number) => {
@@ -230,16 +236,9 @@ export const updateDeductionsInDB = async (
             deduction.currentEIDeduction = newEIDeduction;
           }
 
-          // Check if the new deduction, when added to YTD, exceeds the maximum for CPP
-          if (deduction.YTDCPPDeduction + newCPPDeduction > 3867.5) {
-            // Adjust the new deduction to make sure it doesn't exceed the maximum
-            deduction.currentCPPDeduction = 3867.5 - deduction.YTDCPPDeduction;
-            // update newCPPDeduction value as awell so it can be returned when the function is called after the data is saved to the database
-            newCPPDeduction = 3867.5 - deduction.YTDCPPDeduction;
-          } else {
-            // Set the new deduction
-            deduction.currentCPPDeduction = newCPPDeduction;
-          }
+          // update the new CPP values that were validated already in the getDeductions function
+          deduction.currentCPPDeduction = cppDeduction;
+          deduction.secondCPPDeduction = secondCPPDeduction;
 
           // Check if index + 1 is within the bounds of the array before updating next YTD value
           if (index + 1 < deductions.length) {
@@ -248,7 +247,15 @@ export const updateDeductionsInDB = async (
               deduction.YTDEIDeduction + deduction.currentEIDeduction;
 
             deductions[index + 1].YTDCPPDeduction =
-              deduction.YTDCPPDeduction + deduction.currentCPPDeduction;
+              deduction.YTDCPPDeduction +
+              deduction.currentCPPDeduction +
+              deduction.secondCPPDeduction;
+            if (deduction.secondCPPDeduction > 0) {
+              deductions[index + 1].totalCPPDeductionIncludingSecond =
+                deduction.YTDCPPDeduction +
+                deduction.currentCPPDeduction +
+                deduction.secondCPPDeduction;
+            }
           }
 
           // Flip the boolean to true to now adjust every subsequent pay period's data
@@ -269,13 +276,57 @@ export const updateDeductionsInDB = async (
               maxEIDeduction - deduction.YTDEIDeduction;
           }
 
-          // Check if the deduction, when added to the updated YTD, exceeds the maximum
-          if (
-            deduction.YTDCPPDeduction + deduction.currentCPPDeduction >
-            3867.5
+          // this will be where the new YTD is evaluated and the currentCPPDeduction and the secondCPPDeductions are edited to stay within the maximums
+          // scenario 1 - the new YTD is equal to or greater than the second ceiling, reduce both deductions to 0
+          if (deduction.YTDCPPDeduction >= cppCeilingTwo) {
+            deduction.currentCPPDeduction = 0;
+            deduction.secondCPPDeduction = 0;
+          }
+          // scenario 2 - the new YTD is between the 2 ceilings, so first ceiling has already been reached, reduce current to 0, and calculate a new second CPP deduction and evaluate it to prevent the second ceiling from being exceeded
+          else if (
+            deduction.YTDCPPDeduction >= cppCeilingOne &&
+            deduction.YTDCPPDeduction < cppCeilingTwo
           ) {
-            // Adjust the deduction to make sure it doesn't exceed the maximum
-            deduction.currentCPPDeduction = 3867.5 - deduction.YTDCPPDeduction;
+            // reduce the current step 1 deduction to 0
+            deduction.currentCPPDeduction = 0;
+
+            // calculate a 2nd cpp deduction from the gross income - which will need to account for the 24.80 that is every first payperiod
+            secondCPPDeduction = deduction.grossIncome * cppRateTwo2024;
+            // now validate it to make sure it doesn't exceed the second ceiling
+            if (
+              secondCPPDeduction + deduction.YTDCPPDeduction >
+              cppCeilingTwo
+            ) {
+              // this will reduce it so it does not exceed the second ceiling
+              secondCPPDeduction = cppCeilingTwo - deduction.YTDCPPDeduction;
+            }
+            // now that the secondCPPDeduction for this new deduction period has been calculated and verified, set it
+            deduction.secondCPPDeduction = secondCPPDeduction;
+          }
+          // scenario 3 is when the new YTD is less than the first ceiling, in this case first the first cpp deduction should be calculated from the gross income, then verified/reduced if it surpasses the first ceiling, and if it does pass the first ceiling, the 2nd cpp deduction needs to be calculated/verified and set as the second deduction property
+          else if (deduction.YTDCPPDeduction < cppCeilingOne) {
+            cppDeduction =
+              (deduction.grossIncome - cppExemption) * cppRateOne2024;
+
+            // now check if this deduction, when added to the new YTD value, exceeds ceiling 1, in this case the untaxed income needs to be taxed at the second cpp rate and stored as the secondCPPDeduction property
+            if (cppDeduction + deduction.YTDCPPDeduction > cppCeilingOne) {
+              // first reduce it to make it the correct amount
+              cppDeduction = cppCeilingOne - deduction.YTDCPPDeduction;
+
+              let untaxedAmount =
+                deduction.grossIncome - cppDeduction / cppRateOne2024;
+
+              secondCPPDeduction = untaxedAmount * cppRateTwo2024;
+
+              // now verify this second cpp deduction and reduce it if necessary
+              if (secondCPPDeduction + cppCeilingOne > cppCeilingTwo) {
+                // if it does, reduce it to the exact amount needed to reach the second ceiling
+                secondCPPDeduction = cppCeilingTwo - cppCeilingOne;
+              }
+              // now both deductions should be correct so set them as the properties
+              deduction.currentCPPDeduction = cppDeduction;
+              deduction.secondCPPDeduction = secondCPPDeduction;
+            }
           }
 
           // Check if index + 1 is within the bounds of the array before updating next YTD value
@@ -284,7 +335,23 @@ export const updateDeductionsInDB = async (
             deductions[index + 1].YTDEIDeduction =
               deduction.YTDEIDeduction + deduction.currentEIDeduction;
             deductions[index + 1].YTDCPPDeduction =
-              deduction.YTDCPPDeduction + deduction.currentCPPDeduction;
+              deduction.YTDCPPDeduction +
+              deduction.currentCPPDeduction +
+              deduction.secondCPPDeduction;
+            // if the current pay period, has a second deduction, then the next pay periods totalDeductionIncludingSecond needs to be accurate using these new figures
+            if (deduction.secondCPPDeduction > 0) {
+              deductions[index + 1].totalCPPDeductionIncludingSecond =
+                deduction.YTDCPPDeduction +
+                deduction.currentCPPDeduction +
+                deduction.secondCPPDeduction;
+              console.log(deduction.payDay + " this is the PayDay");
+              console.log(
+                deduction.YTDCPPDeduction + " this is the YTDDeduction"
+              );
+              console.log(
+                deduction.secondCPPDeduction + " this is the second Deduciton"
+              );
+            }
           }
 
           return deduction;
@@ -303,7 +370,6 @@ export const updateDeductionsInDB = async (
     // return the 2 deductions that could have changed if the payday they were updated in had a YTD exceed the maximum
     return {
       eiDeduction: newEIDeduction,
-      cppDeduction: newCPPDeduction,
     };
   } catch (error) {
     console.log(error);

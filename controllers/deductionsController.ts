@@ -1,4 +1,7 @@
-import { IRequestForDeductionData } from "../interfaces/dbInterfaces";
+import {
+  IDeductions,
+  IRequestForDeductionData,
+} from "../interfaces/dbInterfaces";
 import {
   addDeductionsToDB,
   calculateCpp,
@@ -52,18 +55,79 @@ export const getDeductions = async (
   //   ei and cpp calculations also considers uinform allowance in the function
   let ei = calculateEI(grossIncome);
 
-  // this cpp figure also needs to not take gross income but instead take gross minus 8.29 and plus 24.8 if the payday is the first payday of the month
-  let cpp = calculateCpp(grossIncome);
+  let cppDeduction = 0;
+  let cppExemption = 3500 / 26;
+  let secondCPPDeduction = 0;
+  let cppCeilingOne = 3867.5;
+  let cppCeilingTwo = 4055.5;
+  let cppRateOne2024 = 0.0595;
+  let cppRateTwo2024 = 0.04;
+
+  let doc = await db.collection("Deductions").doc(userInfo.id).get();
+  let deductions: IDeductions[] = doc.data()!.deductions;
+  let foundDeduction = deductions.find(
+    (deduction) => deduction.payDay === payDay
+  );
+
+  if (foundDeduction) {
+    // scenario 1, YTD contribution less than ceiling 1
+    if (foundDeduction.YTDCPPDeduction < cppCeilingOne) {
+      // calculate a cpp deduction using the first rate minus the exemption
+      cppDeduction = (grossIncome - cppExemption) * cppRateOne2024;
+      console.log(cppDeduction);
+      // this needs to be checked to see if adding it to the YTD value causes it to exceed the first ceiling
+      if (foundDeduction.YTDCPPDeduction + cppDeduction > cppCeilingOne) {
+        // in this case it needs to be reduced and the untaxed income needs to be taxed using the second CPP rate
+
+        // this reduces the deduction to the exact amount needed to go from the YTD value up to the first ceiling
+        cppDeduction = cppCeilingOne - foundDeduction.YTDCPPDeduction;
+
+        // this will calculate how much income remains after subtracting the amount needed to reach the first ceiling so it can be taxed at 4% and evaluated
+        let untaxedAmount = grossIncome - cppDeduction / cppRateOne2024;
+
+        secondCPPDeduction = untaxedAmount * cppRateTwo2024;
+
+        // now evaluate this secondCPPDeduction to see if adding it will exceed the second ceiling
+        if (secondCPPDeduction + cppCeilingOne > cppCeilingTwo) {
+          // if it does, reduce it so it is the exact amount needed to reach the second ceiling
+          secondCPPDeduction = cppCeilingTwo - cppCeilingOne;
+        }
+      }
+    }
+    // scenario 2, YTD is greater than ceiling 1 but less than ceiling 2, then cppDeduction 1 will stay as 0 and 2 needs to be calculated
+    else if (
+      foundDeduction.YTDCPPDeduction >= cppCeilingOne &&
+      foundDeduction.totalCPPDeductionIncludingSecond < cppCeilingTwo
+    ) {
+      // tax income at 4% because first ceiling has been reached
+      secondCPPDeduction = grossIncome * cppRateTwo2024;
+
+      // now validate it to make sure it doesn't exceed the second ceiling
+      if (
+        secondCPPDeduction + foundDeduction.totalCPPDeductionIncludingSecond >
+        cppCeilingTwo
+      ) {
+        // this will reduce it to be the exact difference between the two values so the total deduction ends up being the exact ceiling
+        secondCPPDeduction =
+          cppCeilingTwo - foundDeduction.totalCPPDeductionIncludingSecond;
+      }
+    }
+    // scenario 3 is if YTD has already passed the second ceiling, then both CPP deductions stay as 0
+  } else {
+    console.log(
+      "Deduction not found for specified payDay in getDeductions function"
+    );
+  }
 
   // income Tax is calculated on gross income minus the 8.29 uinform allowance and minus the pre tax deductions which are union dues and pserp contributions
-  let additionalCPP = cpp * (0.01 / 0.0595);
+  let additionalCPP = cppDeduction * (0.01 / 0.0595) + secondCPPDeduction;
 
   // incomeForTaxCalculation needs to only add 24.8 on the first payday of every month, not every payday
   let incomeForTaxCalculation =
     grossIncome - 8.29 - (unionDues + pserp) + 24.8 - additionalCPP;
   const incomeTax = calculateTax(incomeForTaxCalculation);
 
-  // once all deductions are calculated but before they are sent back to the client, EI and CPP amounts need to be checked against YTD values in the database to ensure that the new deduction amounts when added to the YTD values, do not exceed the yearly maximums. If the amounts will exceed the maximums, the deduction amounts for EI and CPP should be reduced and returned, and the updated values should be saved in the database along with the other deduction and income figures
+  // once all deductions are calculated but before they are sent back to the client, EI needs to be checked against YTD values in the database to ensure that the new deduction amount when added to the YTD values, does not exceed the yearly maximum. If the amount will exceed the maximum, the deduction amount for EI should be reduced and returned, and the updated value should be saved in the database along with the other deduction and income figures. The updateDeductionsInDB was also validating CPP figures previously but that is now handled prior to sending the CPP and secondCPP figures to the db, so the only thing the updateDeductionsInDB needs to do regarding CPP is update all the following entries with new YTD values and the last deductions object that gets updated with a new value needs to make sure that it does not exceed the maximum
 
   let result = await updateDeductionsInDB(
     userInfo,
@@ -73,22 +137,23 @@ export const getDeductions = async (
     pserp,
     incomeTax,
     unionDues,
-    cpp
+    cppDeduction,
+    secondCPPDeduction
   );
 
   const netIncome =
     grossIncome -
     unionDues -
     result?.eiDeduction! -
-    result?.cppDeduction! -
-    incomeTax -
-    pserp;
+    cppDeduction -
+    secondCPPDeduction;
+  incomeTax - pserp;
 
   res.status(200).send({
     data: {
       unionDues,
       ei: result?.eiDeduction!,
-      cpp: result?.cppDeduction!,
+      cpp: cppDeduction + secondCPPDeduction,
       incomeTax,
       pserp,
       netIncome: Number(netIncome.toFixed(2)),
