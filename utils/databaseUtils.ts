@@ -175,12 +175,17 @@ export const addDeductionsToDB = async (
   userInfo: IUserDataForDB,
   year: number
 ) => {
-  let data = getDeductionsForYear(
-    userInfo.platoon,
-    userInfo.rotation!,
-    year,
-    userInfo
-  );
+  let data;
+  if (userInfo.rotation) {
+    data = getDeductionsForYear(
+      userInfo.platoon,
+      year,
+      userInfo,
+      userInfo.rotation!
+    );
+  } else {
+    data = getDeductionsForYear(userInfo.platoon, year, userInfo);
+  }
 
   try {
     let res = await db

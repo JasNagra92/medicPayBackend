@@ -243,7 +243,8 @@ export function generateSingleDaysDataForClient(
   }
 
   const nightEarnings = nightHoursWorked * 2.0;
-  const alphaNightsEarnings = nightHoursWorked * 3.6;
+  let alphaNightsEarnings =
+    userInfo.shiftPattern === "Alpha" ? nightHoursWorked * 3.6 : 0;
   const weekendEarnings = weekendHoursWorked * 2.25;
 
   const dayTotal =
@@ -350,7 +351,10 @@ export function generateLateCallShift(
   const regularOTEarnings =
     regOTHours * (parseFloat(userInfo.hourlyWage) * 2.0);
   const nightEarnings = nightHoursWorked * 2.0;
-  const alphaNightsEarnings = nightHoursWorked * 3.6;
+
+  let alphaNightsEarnings =
+    userInfo.shiftPattern === "Alpha" ? nightHoursWorked * 3.6 : 0;
+
   const weekendEarnings = weekendHoursWorked * 2.25;
 
   const dayTotal =

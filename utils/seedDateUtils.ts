@@ -58,14 +58,17 @@ const RDaySeedDates: Record<string, Record<string, string>> = {
 
 export const getPayPeriodFromMonthYearAndPlatoon = (
   platoon: string,
-  RDay: string,
   month: number,
-  year: number
+  year: number,
+  RDay?: string
 ) => {
   try {
     let seed = DateTime.fromISO(seedDateFirstPayday);
     let payPeriodStart = DateTime.fromISO(seedDateFirstPayPeriodStart);
-    let RDaySeed = DateTime.fromISO(RDaySeedDates[platoon][RDay]);
+    let RDaySeed;
+    if (RDay) {
+      RDaySeed = DateTime.fromISO(RDaySeedDates[platoon][RDay]);
+    }
     let data: Record<string, IScheduleItem[]> = {};
 
     // Initialize rotation index outside the loop based on the platoon
@@ -80,7 +83,7 @@ export const getPayPeriodFromMonthYearAndPlatoon = (
           const currentDate = payPeriodStart.plus({ days: day }).toISODate();
           let rotationDay = rotation[(rotationIndex + day) % rotation.length];
 
-          if (currentDate === RDaySeed.toISODate()) {
+          if (RDay && RDaySeed && currentDate === RDaySeed.toISODate()) {
             rotationDay = "R Day";
             //  increment Rday by 40 days
             RDaySeed = RDaySeed.plus({ days: 40 });
@@ -98,7 +101,7 @@ export const getPayPeriodFromMonthYearAndPlatoon = (
       //   increment all the counters by 14
       payPeriodStart = payPeriodStart.plus({ days: 14 });
       seed = seed.plus({ days: 14 });
-      if (payPeriodStart > RDaySeed) {
+      if (RDaySeed && payPeriodStart > RDaySeed) {
         //  increment Rday by 40 days
         RDaySeed = RDaySeed.plus({ days: 40 });
       }
@@ -116,13 +119,18 @@ export const getPayPeriodFromMonthYearAndPlatoon = (
 // function to take a given year and platoon, generate that platoon schedule for the year, and for the pay periods in each month, calculate the DayTotals for the default shifts, and return an object with gross income and both CPP/EI deductions listed for the default hours worked. This array will be saved for each user with the payday dates, and will be updated each time the user logs OT or sick time, the EI/CPP values will be updated and the previous values will be used to validate the updated EI/CPP figures to make sure the YTD maximums are not exceeded with the new deduction amounts
 export function getDeductionsForYear(
   platoon: string,
-  RDay: string,
   year: number,
-  userInfo: IUserDataForDB
+  userInfo: IUserDataForDB,
+  RDay?: string
 ) {
   try {
     let seed = DateTime.fromISO(seedDateFirstPayday);
-    let RDaySeed = DateTime.fromISO(RDaySeedDates[platoon][RDay]);
+
+    let RDaySeed;
+    if (RDay) {
+      RDaySeed = DateTime.fromISO(RDaySeedDates[platoon][RDay]);
+    }
+
     let payPeriodStart = DateTime.fromISO(seedDateFirstPayPeriodStart);
     let data: Record<string, IScheduleItem[]> = {};
     let yearsEIDeductions: IDeductions[] = [];
@@ -139,11 +147,12 @@ export function getDeductionsForYear(
           let rotationDay = rotation[(rotationIndex + day) % rotation.length];
           // only run the logic for generating a pay days data and calculating the day total for shifts that were worked
           if (rotationDay !== "day off") {
-            if (currentDate === RDaySeed.toISODate()) {
+            if (RDay && RDaySeed && currentDate === RDaySeed.toISODate()) {
               rotationDay = "R Day";
               //  increment Rday by 40 days
               RDaySeed = RDaySeed.plus({ days: 40 });
             }
+
             currentPayPeriodData.push({
               date: DateTime.fromISO(currentDate!).toJSDate(),
               rotation: rotationDay,
@@ -157,7 +166,7 @@ export function getDeductionsForYear(
       payPeriodStart = payPeriodStart.plus({ days: 14 });
       seed = seed.plus({ days: 14 });
 
-      if (payPeriodStart > RDaySeed) {
+      if (RDaySeed && payPeriodStart > RDaySeed) {
         //  increment Rday by 40 days
         RDaySeed = RDaySeed.plus({ days: 40 });
       }

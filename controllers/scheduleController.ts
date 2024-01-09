@@ -41,13 +41,18 @@ export const getMonthsPayPeriodData = async (
   try {
     const { userInfo, month, year } = req.body;
     let responseData: ITwoWeekPayPeriodForClient[] = [];
+    let data;
 
-    let data = getPayPeriodFromMonthYearAndPlatoon(
-      userInfo.platoon,
-      userInfo.rotation!,
-      month,
-      year
-    );
+    if (userInfo.rotation) {
+      data = getPayPeriodFromMonthYearAndPlatoon(
+        userInfo.platoon,
+        month,
+        year,
+        userInfo.rotation
+      );
+    } else {
+      data = getPayPeriodFromMonthYearAndPlatoon(userInfo.platoon, month, year);
+    }
 
     for (const paydayDate in data) {
       const payPeriodData = data[paydayDate];
@@ -177,12 +182,17 @@ export const getSingleDaysWorkData = async (
   } = req.body;
 
   // generate months payDay data and generate single days with the default rotation
-  let data = getPayPeriodFromMonthYearAndPlatoon(
-    userInfo.platoon,
-    userInfo.rotation!,
-    month!,
-    year!
-  );
+  let data;
+  if (userInfo.rotation) {
+    data = getPayPeriodFromMonthYearAndPlatoon(
+      userInfo.platoon,
+      month!,
+      year!,
+      userInfo.rotation
+    );
+  } else {
+    data = getPayPeriodFromMonthYearAndPlatoon(userInfo.platoon, month!, year!);
+  }
 
   let rotation = data[DateTime.fromISO(payDay!).toISODate()!][index!].rotation;
 
