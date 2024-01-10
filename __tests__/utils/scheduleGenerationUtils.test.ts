@@ -47,7 +47,7 @@ describe("generateSingleDaysDataForClient", () => {
       id: "test",
       email: "test",
       shiftPattern: "Alpha",
-      platoon: "C",
+      platoon: "B",
       rotation: "R1",
       dayShiftStartTime: { hours: 6, minutes: 0 },
       dayShiftEndTime: { hours: 18, minutes: 0 },
@@ -55,10 +55,10 @@ describe("generateSingleDaysDataForClient", () => {
       nightShiftEndTime: { hours: 6, minutes: 0 },
       hourlyWage: "43.13",
     };
-    // C Platoon R1 works a day shift on Feb 20th, so the entire 12 hour shift should accrue stat pay, with baseHoursWorked being 0 so the levelling is still accurate
+    // B Platoon R1 works a day shift on Feb 19th, so the entire 12 hour shift should accrue stat pay, with baseHoursWorked being 0 so the levelling is still accurate
     let testScheduleItem = {
-      date: new Date(2024, 1, 20),
-      rotation: "Day 1",
+      date: new Date(2024, 1, 19),
+      rotation: "Day 2",
     };
     let singleDaysPayData = generateSingleDaysDataForClient(
       userInfoFromRequest,
@@ -67,7 +67,7 @@ describe("generateSingleDaysDataForClient", () => {
     expect(singleDaysPayData.OTStatReg).toEqual(12);
     expect(singleDaysPayData.baseHoursWorked).toEqual(0);
   });
-  it("when given a userinfo and shedule item that correlates to a user who started a night shift the day before the stat, and finished on the stat with whole starts, eg 1800-0600, 6 hours should be under baseHoursWorked, and 6 hours should be under the OTStatReg property, with 6 hours of premiums", () => {
+  it("when given a userinfo and schedule item that correlates to a user who started a night shift the day before the stat, and finished on the stat with whole starts, eg 1800-0600, 6 hours should be under baseHoursWorked, and 6 hours should be under the OTStatReg property, with 6 hours of premiums", () => {
     let userInfoFromRequest: IUserDataForDB = {
       id: "test",
       email: "test",
@@ -99,16 +99,16 @@ describe("generateSingleDaysDataForClient", () => {
       shiftPattern: "Alpha",
       platoon: "A",
       rotation: "R1",
-      dayShiftStartTime: { hours: 6, minutes: 0 },
-      dayShiftEndTime: { hours: 18, minutes: 0 },
+      dayShiftStartTime: { hours: 6, minutes: 30 },
+      dayShiftEndTime: { hours: 18, minutes: 30 },
       nightShiftStartTime: { hours: 18, minutes: 30 },
       nightShiftEndTime: { hours: 6, minutes: 0 },
       hourlyWage: "43.13",
     };
-    // A Platoon R1 works a night shift on Feb 19th, so first 6 hours of the shift should accrue base pay, with baseHoursWorked being 6 so the levelling is still accurate and OTStatReg should be 6
+    // A Platoon R1 works a night shift on Feb 18th, so first 5.5 hours of the shift should accrue base pay, with baseHoursWorked being 6 so the levelling is still accurate and OTStatReg should be 6
     let testScheduleItem = {
-      date: new Date(2024, 1, 19),
-      rotation: "Night 2",
+      date: new Date(2024, 1, 18),
+      rotation: "Night 1",
     };
     let singleDaysPayData = generateSingleDaysDataForClient(
       userInfoFromRequest,
@@ -132,7 +132,7 @@ describe("generateSingleDaysDataForClient", () => {
     };
     // A Platoon R1 works a night shift on Feb 19th, so first 6 hours of the shift should accrue base pay, with baseHoursWorked being 6 so the levelling is still accurate and OTStatReg should be 6
     let testScheduleItem = {
-      date: new Date(2024, 1, 19),
+      date: new Date(2024, 1, 18),
       rotation: "Night 2",
     };
     let singleDaysPayData = generateSingleDaysDataForClient(
@@ -197,5 +197,67 @@ describe("generateLateCallShift", () => {
       originalShiftEnd
     );
     expect(result.OTDoubleTime).toEqual(1);
+  });
+
+  it("Late calls logged with a userInfo object that has shiftPattern as Bravo/Charlie, should have the first hour as 1.5x pay listed under the OTOnePointFive property, and all hours after that up to 16 maximum hours as 2.0x pay under the OTDoubleTime property", () => {
+    const testUserInfo: IUserDataForDB = {
+      id: "3r342edsfserseresdf",
+      email: "test",
+      shiftPattern: "Bravo/Charlie",
+      platoon: "A",
+      dayShiftStartTime: { hours: 9, minutes: 0 },
+      dayShiftEndTime: { hours: 20, minutes: 0 },
+      nightShiftStartTime: { hours: 14, minutes: 0 },
+      nightShiftEndTime: { hours: 1, minutes: 0 },
+      hourlyWage: "43.13",
+    };
+    // 14th should be 'Day 1' of A platoons rotation with the payDay being Nov 17th
+    const dateOfLateCall = new Date(2024, 9, 14);
+    const rotation = "Day 1";
+
+    // shift start and end times will be used for wage calculations on the backend, originally start at 0900 on the 14th and end at 2000 on the 14th, updated shift end will be 2200, which should accrue night shift premium of 4 hours, with both OTOnePointFive and OTDoubleTime showing as 1 hour each
+    const shiftStart = new Date(2024, 9, 14, 9);
+    const originalShiftEnd = new Date(2024, 9, 14, 20);
+    const updatedShiftEnd = new Date(2024, 9, 14, 22);
+    const result = generateLateCallShift(
+      testUserInfo,
+      { date: dateOfLateCall, rotation },
+      shiftStart,
+      updatedShiftEnd,
+      originalShiftEnd
+    );
+    expect(result.OTDoubleTime).toEqual(1);
+    expect(result.OTOnePointFive).toEqual(1);
+  });
+  it("Late calls logged with a userInfo object that has shiftPattern as Bravo/Charlie, should have the first hour as 1.5x pay listed under the OTOnePointFive property, and all hours after that up to 16 maximum hours as 2.0x pay under the OTDoubleTime property", () => {
+    const testUserInfo: IUserDataForDB = {
+      id: "3r342edsfserseresdf",
+      email: "test",
+      shiftPattern: "Bravo/Charlie",
+      platoon: "A",
+      dayShiftStartTime: { hours: 9, minutes: 0 },
+      dayShiftEndTime: { hours: 20, minutes: 0 },
+      nightShiftStartTime: { hours: 14, minutes: 0 },
+      nightShiftEndTime: { hours: 1, minutes: 0 },
+      hourlyWage: "43.13",
+    };
+    // 14th should be 'Day 1' of A platoons rotation with the payDay being Nov 17th
+    const dateOfLateCall = new Date(2024, 9, 14);
+    const rotation = "Day 1";
+
+    // shift start and end times will be used for wage calculations on the backend, originally start at 0900 on the 14th and end at 2000 on the 14th, updated shift end will be 2230, which should accrue night shift premium of 4.5 hours, with both OTOnePointFive of 1 and OTDoubleTime showing as 1.5
+    const shiftStart = new Date(2024, 9, 14, 9);
+    const originalShiftEnd = new Date(2024, 9, 14, 20);
+    const updatedShiftEnd = new Date(2024, 9, 14, 22, 30);
+    const result = generateLateCallShift(
+      testUserInfo,
+      { date: dateOfLateCall, rotation },
+      shiftStart,
+      updatedShiftEnd,
+      originalShiftEnd
+    );
+    expect(result.OTDoubleTime).toEqual(1.5);
+    expect(result.OTOnePointFive).toEqual(1);
+    expect(result.nightHoursWorked).toEqual(4.5);
   });
 });

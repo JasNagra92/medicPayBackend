@@ -11,6 +11,7 @@ import {
   getWeekendPremiumHoursWorked,
 } from "./hourAndMoneyUtils";
 import { DateTime } from "luxon";
+import { start } from "repl";
 
 export const statDays2024 = [
   "2024-01-01",
@@ -348,14 +349,30 @@ export function generateLateCallShift(
   );
 
   const baseWageEarnings = baseHoursWorked * parseFloat(userInfo.hourlyWage);
-  const regularOTEarnings =
-    regOTHours * (parseFloat(userInfo.hourlyWage) * 2.0);
+
   const nightEarnings = nightHoursWorked * 2.0;
 
   let alphaNightsEarnings =
     userInfo.shiftPattern === "Alpha" ? nightHoursWorked * 3.6 : 0;
 
   const weekendEarnings = weekendHoursWorked * 2.25;
+
+  let OTHoursBelow1 = 0;
+  let OTHoursAfter1 = 0;
+
+  if (userInfo.shiftPattern === "Bravo/Charlie") {
+    OTHoursBelow1 = Math.min(regOTHours, 1);
+    OTHoursAfter1 = regOTHours - 1;
+  }
+
+  let regularOTEarnings = 0;
+  if (userInfo.shiftPattern === "Alpha") {
+    regularOTEarnings = regOTHours * (parseFloat(userInfo.hourlyWage) * 2.0);
+  } else if (userInfo.shiftPattern === "Bravo/Charlie") {
+    regularOTEarnings =
+      OTHoursBelow1 * (parseFloat(userInfo.hourlyWage) * 1.5) +
+      OTHoursAfter1 * (parseFloat(userInfo.hourlyWage) * 2.0);
+  }
 
   const dayTotal =
     baseWageEarnings +
@@ -364,7 +381,7 @@ export function generateLateCallShift(
     weekendEarnings +
     regularOTEarnings;
 
-  return {
+  const commonProps = {
     date: day.date,
     rotation: day.rotation,
     shiftStart,
@@ -377,8 +394,12 @@ export function generateLateCallShift(
     alphaNightsEarnings,
     weekendEarnings,
     dayTotal,
-    OTDoubleTime: regOTHours,
+    OTDoubleTime:
+      userInfo.shiftPattern === "Alpha" ? regOTHours : OTHoursAfter1,
+    OTOnePointFive: OTHoursBelow1,
   };
+
+  return commonProps;
 }
 
 // function to generate a singleDaysPayData when user requests to log overtime worked on a regular day off, hourly wage is 1.5x base rate up to 12 hours, then 2.0x base wage up to maximum 16 hour shift
