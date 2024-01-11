@@ -272,6 +272,7 @@ export const getRegularOTShift = async (
     payDay,
     monthAndYear,
     rotation,
+    OTAlphaShift,
   } = req.body;
 
   let regularOTDay;
@@ -281,7 +282,8 @@ export const getRegularOTShift = async (
       userInfo,
       new Date(date),
       shiftStart!,
-      shiftEnd!
+      shiftEnd!,
+      OTAlphaShift
     );
     await addOvertimeToDB(
       userInfo,
@@ -289,6 +291,7 @@ export const getRegularOTShift = async (
       index!,
       payDay!,
       monthAndYear!,
+      OTAlphaShift,
       "R Day"
     );
   } else {
@@ -296,14 +299,16 @@ export const getRegularOTShift = async (
       userInfo,
       new Date(date),
       shiftStart!,
-      shiftEnd!
+      shiftEnd!,
+      OTAlphaShift
     );
     await addOvertimeToDB(
       userInfo,
       regularOTDay,
       index!,
       payDay!,
-      monthAndYear!
+      monthAndYear!,
+      OTAlphaShift
     );
   }
 
@@ -323,6 +328,7 @@ export const getRecallOTShift = async (
     payDay,
     monthAndYear,
     prevRotation,
+    OTAlphaShift,
   } = req.body;
 
   const recallOTDay = generateHolidayRecallShift(
@@ -330,6 +336,7 @@ export const getRecallOTShift = async (
     new Date(date),
     shiftStart!,
     shiftEnd!,
+    OTAlphaShift,
     prevRotation!
   );
 
@@ -339,6 +346,7 @@ export const getRecallOTShift = async (
     index!,
     payDay!,
     monthAndYear!,
+    OTAlphaShift,
     prevRotation
   );
 

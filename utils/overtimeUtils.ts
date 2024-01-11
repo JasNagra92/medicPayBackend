@@ -52,6 +52,7 @@ export const addOvertimeToDB = async (
   index: number,
   payDay: string,
   monthAndYear: string,
+  OTAlphaShift: string,
   prevRotation?: string
 ) => {
   if (OTShift.rotation === "Reg OT") {
@@ -62,6 +63,7 @@ export const addOvertimeToDB = async (
         payDay,
         shiftStart: OTShift.shiftStart,
         shiftEnd: OTShift.shiftEnd,
+        OTAlphaShift,
       };
       const res = await db
         .collection("overtimeHours")
@@ -155,13 +157,14 @@ export const updateOvertimeDaysInPayPeriod = async (
             lateCallPayData;
         }
       } else if (doc.data().rotation === "Reg OT") {
-        const { shiftStart, shiftEnd } = doc.data();
+        const { shiftStart, shiftEnd, OTShiftAlpha } = doc.data();
 
         const regularOTDay = generateRegularOTShift(
           userInfo,
           new Date(doc.id),
           new Date(shiftStart),
-          new Date(shiftEnd)
+          new Date(shiftEnd),
+          OTShiftAlpha
         );
 
         if (payPeriodToUpdate) {
@@ -169,13 +172,14 @@ export const updateOvertimeDaysInPayPeriod = async (
             regularOTDay;
         }
       } else if (doc.data().rotation === "Recall") {
-        const { shiftStart, shiftEnd, prevRotation } = doc.data();
+        const { shiftStart, shiftEnd, prevRotation, OTShiftAlpha } = doc.data();
 
         const recallOTDay = generateHolidayRecallShift(
           userInfo,
           new Date(doc.id),
           new Date(shiftStart),
           new Date(shiftEnd),
+          OTShiftAlpha,
           prevRotation
         );
 
@@ -183,13 +187,14 @@ export const updateOvertimeDaysInPayPeriod = async (
           payPeriodToUpdate.workDaysInPayPeriod[doc.data().index] = recallOTDay;
         }
       } else if (doc.data().rotation === "R Day OT") {
-        const { shiftStart, shiftEnd } = doc.data();
+        const { shiftStart, shiftEnd, OTShiftAlpha } = doc.data();
 
         const RDayOTShift = generateRDayOTShift(
           userInfo,
           new Date(doc.id),
           new Date(shiftStart),
-          new Date(shiftEnd)
+          new Date(shiftEnd),
+          OTShiftAlpha
         );
 
         if (payPeriodToUpdate) {

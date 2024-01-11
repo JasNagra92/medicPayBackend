@@ -2,6 +2,7 @@ import {
   generateSingleDaysDataForClient,
   generateWholeStiipShift,
   generateLateCallShift,
+  generateRegularOTShift,
 } from "../../utils/scheduleGenerationUtils";
 import {
   ISingleDaysPayDataForClient,
@@ -259,5 +260,63 @@ describe("generateLateCallShift", () => {
     expect(result.OTDoubleTime).toEqual(1.5);
     expect(result.OTOnePointFive).toEqual(1);
     expect(result.nightHoursWorked).toEqual(4.5);
+  });
+});
+
+describe("generateRegularOTShift", () => {
+  it("should check if the OTShiftAlpha variable is set to Alpha, only add alphaNightEarnings to the total if it is Alpha, otherwise set it to 0", () => {
+    const testUserInfo: IUserDataForDB = {
+      id: "3r342edsfserseresdf",
+      email: "test",
+      shiftPattern: "Alpha",
+      platoon: "A",
+      dayShiftStartTime: { hours: 6, minutes: 0 },
+      dayShiftEndTime: { hours: 18, minutes: 0 },
+      nightShiftStartTime: { hours: 18, minutes: 0 },
+      nightShiftEndTime: { hours: 6, minutes: 0 },
+      hourlyWage: "43.13",
+    };
+    // Feb 13th for A platoon is 2nd day off
+    const dateOfShift = new Date(2024, 1, 13);
+    // shift to list as the OT is a night shift from 1800 to 0600, and for this test it will have the OTShiftAlpha variable set to Alpha
+    const shiftStart = new Date(2024, 1, 13, 18);
+    const shiftEnd = new Date(2024, 1, 14, 6);
+    const OTShiftAlpha = "Alpha";
+    let result = generateRegularOTShift(
+      testUserInfo,
+      dateOfShift,
+      shiftStart,
+      shiftEnd,
+      OTShiftAlpha
+    );
+    expect(result.alphaNightsEarnings).toBeGreaterThan(0);
+  });
+  it("with OTShiftAlpha set as an empty string, alphanightearnings should be 0", () => {
+    const testUserInfo: IUserDataForDB = {
+      id: "3r342edsfserseresdf",
+      email: "test",
+      shiftPattern: "Alpha",
+      platoon: "A",
+      dayShiftStartTime: { hours: 6, minutes: 0 },
+      dayShiftEndTime: { hours: 18, minutes: 0 },
+      nightShiftStartTime: { hours: 18, minutes: 0 },
+      nightShiftEndTime: { hours: 6, minutes: 0 },
+      hourlyWage: "43.13",
+    };
+    // Feb 13th for A platoon is 2nd day off
+    const dateOfShift = new Date(2024, 1, 13);
+    // shift to list as the OT is a night shift from 1800 to 0600, and for this test it will have the OTShiftAlpha variable set to Alpha
+    const shiftStart = new Date(2024, 1, 13, 18);
+    const shiftEnd = new Date(2024, 1, 14, 6);
+    const OTShiftAlpha = "";
+    let result = generateRegularOTShift(
+      testUserInfo,
+      dateOfShift,
+      shiftStart,
+      shiftEnd,
+      OTShiftAlpha
+    );
+    console.log(result);
+    expect(result.alphaNightsEarnings).toBe(0);
   });
 });

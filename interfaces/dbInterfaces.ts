@@ -82,6 +82,8 @@ export interface IRequestForSinglePayDayData extends Request {
     userInfo: IUserDataForDB;
     date: string;
     rotation: string;
+    // OTAlphaShift will either be an empty string or "Alpha" indicating the OT shift was an alpha shift so should accrue the correct premiums
+    OTAlphaShift: string;
     // optional properties sent with requests to delete singleDaysPayData from database when user deselects stiip or overtime
     collectionInDB?: string;
     monthAndYear?: string;

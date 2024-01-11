@@ -407,7 +407,8 @@ export function generateRegularOTShift(
   userInfo: IUserDataForDB,
   date: Date,
   shiftStart: Date,
-  shiftEnd: Date
+  shiftEnd: Date,
+  OTShiftAlpha?: string
 ) {
   const shiftStartForOT = new Date(shiftStart);
   const shiftEndForOT = new Date(shiftEnd);
@@ -435,7 +436,10 @@ export function generateRegularOTShift(
   );
 
   const nightEarnings = nightHoursWorked * 2.0;
-  const alphaNightsEarnings = nightHoursWorked * 3.6;
+
+  let alphaNightsEarnings =
+    OTShiftAlpha === "Alpha" ? nightHoursWorked * 3.6 : 0;
+
   const weekendEarnings = weekendHoursWorked * 2.25;
 
   const dayTotal =
@@ -467,7 +471,8 @@ export function generateRDayOTShift(
   userInfo: IUserDataForDB,
   date: Date,
   shiftStart: Date,
-  shiftEnd: Date
+  shiftEnd: Date,
+  OTShiftAlpha: string
 ) {
   const shiftStartForOT = new Date(shiftStart);
   const shiftEndForOT = new Date(shiftEnd);
@@ -496,7 +501,10 @@ export function generateRDayOTShift(
   );
 
   const nightEarnings = nightHoursWorked * 2.0;
-  const alphaNightsEarnings = nightHoursWorked * 3.6;
+
+  let alphaNightsEarnings =
+    OTShiftAlpha === "Alpha" ? nightHoursWorked * 3.6 : 0;
+
   const weekendEarnings = weekendHoursWorked * 2.25;
 
   const dayTotal =
@@ -531,6 +539,7 @@ export function generateHolidayRecallShift(
   date: Date,
   shiftStart: Date,
   shiftEnd: Date,
+  OTShiftAlpha: string,
   prevRotation?: string
 ) {
   const shiftStartForOT = new Date(shiftStart);
@@ -548,7 +557,10 @@ export function generateHolidayRecallShift(
     shiftEndForOT
   );
   const nightEarnings = nightHoursWorked * 2.0;
-  const alphaNightsEarnings = nightHoursWorked * 3.6;
+
+  let alphaNightsEarnings =
+    OTShiftAlpha === "Alpha" ? nightHoursWorked * 3.6 : 0;
+
   const weekendEarnings = weekendHoursWorked * 2.25;
 
   let dayTotal =
