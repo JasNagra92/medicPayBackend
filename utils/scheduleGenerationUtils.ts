@@ -14,6 +14,8 @@ import { DateTime } from "luxon";
 import { start } from "repl";
 
 export const statDays2024 = [
+  "2023-12-26",
+  "2024-12-25",
   "2024-01-01",
   "2024-02-19",
   "2024-03-29",
@@ -25,6 +27,7 @@ export const statDays2024 = [
   "2024-10-14",
   "2024-11-11",
   "2024-12-25",
+  "2024-12-26",
 ];
 
 function isOnStatDay(jsDate: Date): boolean {
@@ -40,6 +43,17 @@ function isOnStatDay(jsDate: Date): boolean {
   });
 
   return isOnStatDay;
+}
+
+function isOnSuperStat(jsDate: Date): boolean {
+  const dateToCheck = DateTime.fromJSDate(jsDate);
+
+  // Check if the date is Christmas (December 25th) or New Year's Day (January 1st)
+  const isOnHoliday =
+    (dateToCheck.month === 12 && dateToCheck.day === 25) ||
+    (dateToCheck.month === 1 && dateToCheck.day === 1);
+
+  return isOnHoliday;
 }
 
 export function isWholeShiftOnStatDay(
@@ -62,6 +76,29 @@ export function isWholeShiftOnStatDay(
 
   return isOnStatDay;
 }
+
+export function isWholeShiftOnSuperStatDay(
+  userInfo: IUserDataForDB,
+  day: IScheduleItem
+) {
+  const shiftStart = generateStartTimeDate(day, userInfo);
+  const shiftEnd = generateEndTimeDate(day, userInfo);
+  const shiftStartDay = DateTime.fromJSDate(shiftStart);
+  const shiftEndDay = DateTime.fromJSDate(shiftEnd);
+  // Check if shift starts and ends on December 25th or starts and ends on January 1st
+  const isOnStatDay =
+    (shiftStartDay.day === 25 &&
+      shiftStartDay.month === 12 &&
+      shiftEndDay.day === 25 &&
+      shiftEndDay.month === 12) ||
+    (shiftStartDay.day === 1 &&
+      shiftStartDay.month === 1 &&
+      shiftEndDay.day === 1 &&
+      shiftEndDay.month === 1);
+
+  return isOnStatDay;
+}
+
 // function to check if a shift starts the day before a stat and ends on a stat, will need to handle this case seperately and count hours correctly
 export function isShiftOnStatDay(userInfo: IUserDataForDB, day: IScheduleItem) {
   const shiftStart = generateStartTimeDate(day, userInfo);
@@ -81,16 +118,37 @@ export function isShiftOnStatDay(userInfo: IUserDataForDB, day: IScheduleItem) {
   return isOnStatDay;
 }
 
+// function to check if shift is on one of the super stats
+export function isShiftOnSuperStat(
+  userInfo: IUserDataForDB,
+  day: IScheduleItem
+) {
+  const shiftStart = generateStartTimeDate(day, userInfo);
+  const shiftEnd = generateEndTimeDate(day, userInfo);
+  const shiftStartDay = DateTime.fromJSDate(shiftStart);
+  const shiftEndDay = DateTime.fromJSDate(shiftEnd);
+
+  // Check if shift starts or ends on Christmas (December 25th) or New Year's Day (January 1st)
+  const isOnHoliday =
+    (shiftStartDay.month === 12 && shiftStartDay.day === 25) ||
+    (shiftEndDay.month === 12 && shiftEndDay.day === 25) ||
+    (shiftStartDay.month === 1 && shiftStartDay.day === 1) ||
+    (shiftEndDay.month === 1 && shiftEndDay.day === 1);
+
+  return isOnHoliday;
+}
+
 export function getHoursWorkedWithStatPremium(
   userInfo: IUserDataForDB,
   day: IScheduleItem
-): { baseHoursWorked: number; OTStatReg: number } {
+): { baseHoursWorked: number; OTStatReg: number; OTSuperStat: number } {
   const shiftStart = generateStartTimeDate(day, userInfo);
   const shiftEnd = generateEndTimeDate(day, userInfo);
   const hoursWorked = getHoursWorked(shiftStart, shiftEnd);
 
   let baseHoursWorked = 0;
   let OTStatReg = 0;
+  let OTSuperStat = 0;
 
   // Extract fractions from start and end times
   const startFraction = shiftStart.getMinutes() / 60;
@@ -101,6 +159,8 @@ export function getHoursWorkedWithStatPremium(
     // Check if the start hour is on a stat day
     if (isOnStatDay(shiftStart)) {
       OTStatReg += startFraction;
+    } else if (isOnSuperStat(shiftStart)) {
+      OTSuperStat += startFraction;
     } else {
       baseHoursWorked += 1 - startFraction;
     }
@@ -111,6 +171,8 @@ export function getHoursWorkedWithStatPremium(
     // Check if the end hour is on a stat day
     if (isOnStatDay(shiftEnd)) {
       OTStatReg += endFraction;
+    } else if (isOnSuperStat(shiftEnd)) {
+      OTSuperStat += endFraction;
     } else {
       baseHoursWorked += endFraction;
     }
@@ -126,18 +188,21 @@ export function getHoursWorkedWithStatPremium(
       hour: currentHour,
     });
 
-    // Check if the current hour is on a stat day
-    let result = isOnStatDay(currentHourDateTime.toJSDate());
+    // Check if the current hour is on a stat day or super stat day
+    const superStat = isOnSuperStat(currentHourDateTime.toJSDate());
+    const isOnStat = isOnStatDay(currentHourDateTime.toJSDate());
 
-    // Increment counters based on whether the current hour is on the stat or not
-    if (result) {
+    // Increment counters based on whether the current hour is on the super stat, stat, or neither
+    if (superStat) {
+      OTSuperStat += 1;
+    } else if (isOnStat) {
       OTStatReg += 1;
     } else {
       baseHoursWorked += 1; // Increment base hours for non-stat day
     }
   }
 
-  return { baseHoursWorked, OTStatReg };
+  return { baseHoursWorked, OTStatReg, OTSuperStat };
 }
 
 export function generatePartialStiipDaysDataForClient(
@@ -206,6 +271,7 @@ export function generateSingleDaysDataForClient(
   const shiftEnd = generateEndTimeDate(day, userInfo);
 
   let OTStatReg = 0;
+  let OTSuperStat = 0;
   let baseHoursWorked =
     day.rotation === "day off" || day.rotation === "R Day"
       ? 0
@@ -216,11 +282,12 @@ export function generateSingleDaysDataForClient(
       // if the entire shift took place on a stat day, the base hours variable will be 0 in order to reduce levelling, and instead of directly increasing levelling, the levelling calculation on the front end will add the OTStatReg variable hours into the equation
       OTStatReg = baseHoursWorked;
       baseHoursWorked = 0;
+    } else if (isWholeShiftOnSuperStatDay(userInfo, day)) {
+      OTSuperStat = baseHoursWorked;
+      baseHoursWorked = 0;
     } else if (isShiftOnStatDay(userInfo, day)) {
-      ({ baseHoursWorked, OTStatReg } = getHoursWorkedWithStatPremium(
-        userInfo,
-        day
-      ));
+      ({ baseHoursWorked, OTStatReg, OTSuperStat } =
+        getHoursWorkedWithStatPremium(userInfo, day));
     }
   }
 
@@ -255,7 +322,8 @@ export function generateSingleDaysDataForClient(
         alphaNightsEarnings +
         nightEarnings +
         weekendEarnings +
-        OTStatReg * (parseFloat(userInfo.hourlyWage) * 2);
+        OTStatReg * (parseFloat(userInfo.hourlyWage) * 2) +
+        OTSuperStat * (parseFloat(userInfo.hourlyWage) * 2.5);
 
   return {
     date: day.date,
@@ -264,6 +332,7 @@ export function generateSingleDaysDataForClient(
     shiftEnd,
     baseHoursWorked,
     OTStatReg,
+    OTSuperStat,
     nightHoursWorked,
     weekendHoursWorked,
     baseWageEarnings,
@@ -317,7 +386,7 @@ export function generateWholeStiipShift(
   };
 }
 
-// function to generate a singleDaysPayData with late call overtime attached at 2.0 hourlyWage if the shift is an alpha, BC shifts will need a different calculation because their overtime from 11-12 hours worked is at 1.5x and anything over 12 is double time
+// function to generate a singleDaysPayData with late call overtime attached at 2.0 hourlyWage if the shift is an alpha, BC shifts will need a different calculation because their overtime from 11-12 hours worked is at 1.5x and anything over 12 is double time. Also needs to see if the late call occurs on a Stat or Super Stat and put the OT under the correct property
 export function generateLateCallShift(
   userInfo: IUserDataForDB,
   day: IScheduleItem,
@@ -329,10 +398,7 @@ export function generateLateCallShift(
   const originalShiftEndForOT = new Date(originalShiftEnd);
   const updatedShiftEndForOT = new Date(updatedShiftEnd);
 
-  const baseHoursWorked = getHoursWorked(
-    shiftStartForOT,
-    originalShiftEndForOT
-  );
+  let baseHoursWorked = getHoursWorked(shiftStartForOT, originalShiftEndForOT);
   const regOTHours = getHoursWorked(
     originalShiftEndForOT,
     updatedShiftEndForOT
@@ -348,8 +414,6 @@ export function generateLateCallShift(
     updatedShiftEndForOT
   );
 
-  const baseWageEarnings = baseHoursWorked * parseFloat(userInfo.hourlyWage);
-
   const nightEarnings = nightHoursWorked * 2.0;
 
   let alphaNightsEarnings =
@@ -362,24 +426,50 @@ export function generateLateCallShift(
 
   if (userInfo.shiftPattern === "Bravo/Charlie") {
     OTHoursBelow1 = Math.min(regOTHours, 1);
-    OTHoursAfter1 = regOTHours - 1;
+    OTHoursAfter1 = regOTHours > 1 ? regOTHours - 1 : 0;
   }
 
   let regularOTEarnings = 0;
   if (userInfo.shiftPattern === "Alpha") {
     regularOTEarnings = regOTHours * (parseFloat(userInfo.hourlyWage) * 2.0);
+  } else if (
+    userInfo.shiftPattern === "Bravo/Charlie" &&
+    isOnStatDay(originalShiftEndForOT)
+  ) {
+    regularOTEarnings = regOTHours * (parseFloat(userInfo.hourlyWage) * 2.0);
+    OTHoursBelow1 = 0;
+    OTHoursAfter1 = regOTHours;
   } else if (userInfo.shiftPattern === "Bravo/Charlie") {
     regularOTEarnings =
       OTHoursBelow1 * (parseFloat(userInfo.hourlyWage) * 1.5) +
       OTHoursAfter1 * (parseFloat(userInfo.hourlyWage) * 2.0);
   }
 
+  let OTStatReg = 0;
+  let OTSuperStat = 0;
+
+  if (isWholeShiftOnStatDay(userInfo, day)) {
+    // if the entire shift took place on a stat day, the base hours variable will be 0 in order to reduce levelling, and instead of directly increasing levelling, the levelling calculation on the front end will add the OTStatReg variable hours into the equation
+    OTStatReg = baseHoursWorked;
+    baseHoursWorked = 0;
+  } else if (isWholeShiftOnSuperStatDay(userInfo, day)) {
+    OTSuperStat = baseHoursWorked;
+    baseHoursWorked = 0;
+  } else if (isShiftOnStatDay(userInfo, day)) {
+    ({ baseHoursWorked, OTStatReg, OTSuperStat } =
+      getHoursWorkedWithStatPremium(userInfo, day));
+  }
+
+  let baseWageEarnings = baseHoursWorked * parseFloat(userInfo.hourlyWage);
+
   const dayTotal =
     baseWageEarnings +
     alphaNightsEarnings +
     nightEarnings +
     weekendEarnings +
-    regularOTEarnings;
+    regularOTEarnings +
+    OTStatReg * (parseFloat(userInfo.hourlyWage) * 2) +
+    OTSuperStat * (parseFloat(userInfo.hourlyWage) * 2.5);
 
   const commonProps = {
     date: day.date,
@@ -387,6 +477,8 @@ export function generateLateCallShift(
     shiftStart,
     shiftEnd: updatedShiftEndForOT,
     baseHoursWorked,
+    OTStatReg,
+    OTSuperStat,
     nightHoursWorked,
     weekendHoursWorked,
     baseWageEarnings,
@@ -408,7 +500,7 @@ export function generateRegularOTShift(
   date: Date,
   shiftStart: Date,
   shiftEnd: Date,
-  OTShiftAlpha?: string
+  OTAlphaShift?: string
 ) {
   const shiftStartForOT = new Date(shiftStart);
   const shiftEndForOT = new Date(shiftEnd);
@@ -438,7 +530,7 @@ export function generateRegularOTShift(
   const nightEarnings = nightHoursWorked * 2.0;
 
   let alphaNightsEarnings =
-    OTShiftAlpha === "Alpha" ? nightHoursWorked * 3.6 : 0;
+    OTAlphaShift === "Alpha" ? nightHoursWorked * 3.6 : 0;
 
   const weekendEarnings = weekendHoursWorked * 2.25;
 
@@ -472,7 +564,7 @@ export function generateRDayOTShift(
   date: Date,
   shiftStart: Date,
   shiftEnd: Date,
-  OTShiftAlpha: string
+  OTAlphaShift: string
 ) {
   const shiftStartForOT = new Date(shiftStart);
   const shiftEndForOT = new Date(shiftEnd);
@@ -503,7 +595,7 @@ export function generateRDayOTShift(
   const nightEarnings = nightHoursWorked * 2.0;
 
   let alphaNightsEarnings =
-    OTShiftAlpha === "Alpha" ? nightHoursWorked * 3.6 : 0;
+    OTAlphaShift === "Alpha" ? nightHoursWorked * 3.6 : 0;
 
   const weekendEarnings = weekendHoursWorked * 2.25;
 
@@ -539,7 +631,7 @@ export function generateHolidayRecallShift(
   date: Date,
   shiftStart: Date,
   shiftEnd: Date,
-  OTShiftAlpha: string,
+  OTAlphaShift: string,
   prevRotation?: string
 ) {
   const shiftStartForOT = new Date(shiftStart);
@@ -559,7 +651,7 @@ export function generateHolidayRecallShift(
   const nightEarnings = nightHoursWorked * 2.0;
 
   let alphaNightsEarnings =
-    OTShiftAlpha === "Alpha" ? nightHoursWorked * 3.6 : 0;
+    OTAlphaShift === "Alpha" ? nightHoursWorked * 3.6 : 0;
 
   const weekendEarnings = weekendHoursWorked * 2.25;
 

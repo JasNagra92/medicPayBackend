@@ -157,14 +157,14 @@ export const updateOvertimeDaysInPayPeriod = async (
             lateCallPayData;
         }
       } else if (doc.data().rotation === "Reg OT") {
-        const { shiftStart, shiftEnd, OTShiftAlpha } = doc.data();
+        const { shiftStart, shiftEnd, OTAlphaShift } = doc.data();
 
         const regularOTDay = generateRegularOTShift(
           userInfo,
           new Date(doc.id),
           new Date(shiftStart),
           new Date(shiftEnd),
-          OTShiftAlpha
+          OTAlphaShift
         );
 
         if (payPeriodToUpdate) {
@@ -172,14 +172,14 @@ export const updateOvertimeDaysInPayPeriod = async (
             regularOTDay;
         }
       } else if (doc.data().rotation === "Recall") {
-        const { shiftStart, shiftEnd, prevRotation, OTShiftAlpha } = doc.data();
+        const { shiftStart, shiftEnd, prevRotation, OTAlphaShift } = doc.data();
 
         const recallOTDay = generateHolidayRecallShift(
           userInfo,
           new Date(doc.id),
           new Date(shiftStart),
           new Date(shiftEnd),
-          OTShiftAlpha,
+          OTAlphaShift,
           prevRotation
         );
 
@@ -187,14 +187,14 @@ export const updateOvertimeDaysInPayPeriod = async (
           payPeriodToUpdate.workDaysInPayPeriod[doc.data().index] = recallOTDay;
         }
       } else if (doc.data().rotation === "R Day OT") {
-        const { shiftStart, shiftEnd, OTShiftAlpha } = doc.data();
+        const { shiftStart, shiftEnd, OTAlphaShift } = doc.data();
 
         const RDayOTShift = generateRDayOTShift(
           userInfo,
           new Date(doc.id),
           new Date(shiftStart),
           new Date(shiftEnd),
-          OTShiftAlpha
+          OTAlphaShift
         );
 
         if (payPeriodToUpdate) {

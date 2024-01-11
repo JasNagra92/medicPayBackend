@@ -52,6 +52,7 @@ export interface ISingleDaysPayDataForClient {
   // base hours/wage are optional because in a regular overtime/holiday recall shift, they will be 0 and the hours/earnings will be logged under the regOT and holidayOT properties
   baseHoursWorked?: number;
   OTStatReg?: number;
+  OTSuperStat?: number;
   baseWageEarnings?: number;
   nightHoursWorked: number;
   alphaNightsEarnings: number;
@@ -150,5 +151,6 @@ export interface IRequestForDeductionData extends Request {
     incomeLessLevelling: number;
     payDay: string;
     OTStatReg?: number;
+    OTSuperStat?: number;
   };
 }

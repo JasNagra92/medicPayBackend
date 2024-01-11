@@ -28,6 +28,7 @@ export const getDeductions = async (
     OTOnePointFiveAmount,
     payDay,
     OTStatReg,
+    OTSuperStat,
   } = req.body;
 
   // check if the default deductions collection has already been created for this user, if not, create it
@@ -46,7 +47,8 @@ export const getDeductions = async (
     stiipHours * (parseFloat(userInfo.hourlyWage) * 0.75) -
     (OTOnePointFiveAmount ? OTOnePointFiveAmount : 0) -
     (OTDoubleTimeAmount ? OTDoubleTimeAmount : 0) -
-    (OTStatReg ? OTStatReg * parseFloat(userInfo.hourlyWage) : 0);
+    (OTStatReg ? OTStatReg * parseFloat(userInfo.hourlyWage) : 0) -
+    (OTSuperStat ? OTSuperStat * (parseFloat(userInfo.hourlyWage) * 1.5) : 0);
   // factor in super stat for new years and christmas - todo
 
   const additionForPserp = stiipHours * parseFloat(userInfo.hourlyWage);
@@ -64,6 +66,10 @@ export const getDeductions = async (
   let cppRateOne2024 = 0.0595;
   let cppRateTwo2024 = 0.04;
 
+  // calculate the day of the payday and if it is the first payday of the month, will need to add 24.80 to taxable income for income tax and cpp calculations if it is
+  const payDayDateTime = DateTime.fromISO(payDay);
+  const day = payDayDateTime.day;
+
   let doc = await db.collection("Deductions").doc(userInfo.id).get();
   let deductions: IDeductions[] = doc.data()!.deductions;
   let foundDeduction = deductions.find(
@@ -74,7 +80,9 @@ export const getDeductions = async (
     // scenario 1, YTD contribution less than ceiling 1
     if (foundDeduction.YTDCPPDeduction < cppCeilingOne) {
       // calculate a cpp deduction using the first rate minus the exemption
-      cppDeduction = (grossIncome - cppExemption) * cppRateOne2024;
+      cppDeduction =
+        (grossIncome - cppExemption - 8.29 + (day <= 14 ? 24.8 : 0)) *
+        cppRateOne2024;
       // this needs to be checked to see if adding it to the YTD value causes it to exceed the first ceiling
       if (foundDeduction.YTDCPPDeduction + cppDeduction > cppCeilingOne) {
         // in this case it needs to be reduced and the untaxed income needs to be taxed using the second CPP rate
@@ -121,10 +129,6 @@ export const getDeductions = async (
 
   // income Tax is calculated on gross income minus the 8.29 uinform allowance and minus the pre tax deductions which are union dues and pserp contributions
   let additionalCPP = cppDeduction * (0.01 / 0.0595) + secondCPPDeduction;
-
-  // calculate the day of the payday and if it is the first payday of the month,
-  const payDayDateTime = DateTime.fromISO(payDay);
-  const day = payDayDateTime.day;
 
   // incomeForTaxCalculation needs to only add 24.8 on the first payday of every month, not every payday
   let incomeForTaxCalculation =

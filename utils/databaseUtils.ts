@@ -20,25 +20,25 @@ export const calculateTax = (grossIncome: number) => {
     let taxRateFed, constantFed;
 
     switch (true) {
-      case annualTaxableIncome >= 0 && annualTaxableIncome <= 53359:
+      case annualTaxableIncome >= 0 && annualTaxableIncome <= 55867:
         taxRateFed = 0.15;
         constantFed = 0;
         break;
-      case annualTaxableIncome <= 106717:
+      case annualTaxableIncome <= 111733:
         taxRateFed = 0.205;
-        constantFed = 2935;
+        constantFed = 3073;
         break;
-      case annualTaxableIncome <= 165430:
+      case annualTaxableIncome <= 173205:
         taxRateFed = 0.26;
-        constantFed = 8804;
+        constantFed = 9218;
         break;
-      case annualTaxableIncome <= 235675:
+      case annualTaxableIncome <= 246752:
         taxRateFed = 0.29;
-        constantFed = 13767;
+        constantFed = 14414;
         break;
       default:
         taxRateFed = 0.33;
-        constantFed = 23194;
+        constantFed = 24284;
     }
 
     return { taxRateFed, constantFed };
@@ -49,40 +49,40 @@ export const calculateTax = (grossIncome: number) => {
 
   // max ei and cpp amounts are 1049.12 and 3867.50 for 2024, the canada employment amount still had 1368.00 as of last check on Nov 27th 2023. Max CPP contributions in this formula are actually the Base CPP contribution which is calculated by maxCPP * (.0495/.0595), so max in 2023 was 3754.45 which led to a max base amount of 3123.45. 2024 numbers will be different
   let fedTax = annualTaxableIncome * taxRateFed - constantFed;
-  let fedTaxCredits = (15000 + 3217.5 + 1049.12 + 1368.0) * 0.15;
+  let fedTaxCredits = (15705 + 3217.5 + 1049.12 + 1368.0) * 0.15;
   let fedTaxPayable = (fedTax - fedTaxCredits) / 26;
 
   function calculateProvincialTax(annualTaxableIncome: number) {
     let taxRateProv, constantProv;
 
     switch (true) {
-      case annualTaxableIncome >= 0 && annualTaxableIncome <= 45654:
+      case annualTaxableIncome >= 0 && annualTaxableIncome <= 47939:
         taxRateProv = 0.0506;
         constantProv = 0;
         break;
-      case annualTaxableIncome <= 91310:
+      case annualTaxableIncome <= 95875:
         taxRateProv = 0.077;
-        constantProv = 1205;
+        constantProv = 1266;
         break;
-      case annualTaxableIncome <= 104835:
+      case annualTaxableIncome <= 110076:
         taxRateProv = 0.105;
-        constantProv = 3762;
+        constantProv = 3950;
         break;
-      case annualTaxableIncome <= 127299:
+      case annualTaxableIncome <= 133664:
         taxRateProv = 0.1229;
-        constantProv = 5638;
+        constantProv = 5920;
         break;
-      case annualTaxableIncome <= 172602:
+      case annualTaxableIncome <= 181232:
         taxRateProv = 0.147;
-        constantProv = 8706;
+        constantProv = 9142;
         break;
-      case annualTaxableIncome <= 240716:
+      case annualTaxableIncome <= 252752:
         taxRateProv = 0.168;
-        constantProv = 12331;
+        constantProv = 12948;
         break;
       default:
         taxRateProv = 0.205;
-        constantProv = 21238;
+        constantProv = 22299;
     }
 
     return { taxRateProv, constantProv };
@@ -93,7 +93,7 @@ export const calculateTax = (grossIncome: number) => {
 
   // change to ei and cpp max amounts here as well
   let provTax = annualTaxableIncome * taxRateProv - constantProv;
-  let provTaxCredits = (11981 + 3217.5 + 1049.12) * 0.0506;
+  let provTaxCredits = (12580 + 3217.5 + 1049.12) * 0.0506;
   let provTaxPayable = (provTax - provTaxCredits) / 26;
 
   // use online calculator, total cash income is gross - 8.29 for uinform allowance, calculator gives you accurate tax deduction. Non-cash insurable for EI is 24.80. Ei deduction uses gross income minus 8.29 uniform allowance and is multiplied by 1.63%, calculator also accurately gives you cpp value. Union dues are calculated off actual hours worked * 2.1%, and pserp deduction is 80 hours plus premiums and no overtime added multiplied by 8.35% pserp for jan 1, was stat pay but superstat was not pensionable, and deduct uniform allowance
@@ -110,7 +110,7 @@ export const calculateCpp = (grossIncome: number) => {
   return Number(cpp.toFixed(2));
 };
 export const calculateUnionDues = (incomeLessLevelling: number) => {
-  let unionDues = (incomeLessLevelling - 8.29) * 0.021;
+  let unionDues = incomeLessLevelling * 0.021;
   return Number(unionDues.toFixed(2));
 };
 export const calculatePension = (incomeLessOTLessStiip: number) => {
