@@ -205,7 +205,7 @@ const updateFirstFiveSickDays = async (
           .collection("sickHours")
           .doc(latestEntry.monthAndYear)
           .collection(userInfo.id)
-          .doc(new Date(latestEntry.date).toISOString())
+          .doc(latestEntry.date)
           .update({ firstFive: false });
       } else {
         // in this branch the date being added is later than the first five sick days, so the data that is going to be saved needs to have the boolean flipped to false before the sick day gets saved
