@@ -11,9 +11,9 @@ import {
   getWeekendPremiumHoursWorked,
 } from "./hourAndMoneyUtils";
 import { DateTime } from "luxon";
-import { start } from "repl";
 
 export const statDays2024 = [
+  "2023-12-25",
   "2023-12-26",
   "2024-12-25",
   "2024-01-01",
@@ -140,10 +140,18 @@ export function isShiftOnSuperStat(
 
 export function getHoursWorkedWithStatPremium(
   userInfo: IUserDataForDB,
-  day: IScheduleItem
+  day?: IScheduleItem,
+  shiftStartForRegOT?: Date,
+  shiftEndForRegOT?: Date
 ): { baseHoursWorked: number; OTStatReg: number; OTSuperStat: number } {
-  const shiftStart = generateStartTimeDate(day, userInfo);
-  const shiftEnd = generateEndTimeDate(day, userInfo);
+  let shiftStart = shiftStartForRegOT
+    ? shiftStartForRegOT
+    : generateStartTimeDate(day!, userInfo);
+
+  let shiftEnd = shiftEndForRegOT
+    ? shiftEndForRegOT
+    : generateEndTimeDate(day!, userInfo);
+
   const hoursWorked = getHoursWorked(shiftStart, shiftEnd);
 
   let baseHoursWorked = 0;
@@ -505,14 +513,14 @@ export function generateRegularOTShift(
   const shiftStartForOT = new Date(shiftStart);
   const shiftEndForOT = new Date(shiftEnd);
 
-  const regOTHours = getHoursWorked(shiftStartForOT, shiftEndForOT);
+  let regOTHours = getHoursWorked(shiftStartForOT, shiftEndForOT);
 
   // Calculate regular OT earnings for the first 12 hours
-  const first12HoursEarnings =
+  let first12HoursEarnings =
     Math.min(regOTHours, 12) * (parseFloat(userInfo.hourlyWage) * 1.5);
 
   // If regOTHours is greater than 12, calculate earnings for hours above 12 at 2.0x the hourly wage
-  const hoursAbove12Earnings =
+  let hoursAbove12Earnings =
     regOTHours > 12
       ? (regOTHours - 12) * (parseFloat(userInfo.hourlyWage) * 2.0)
       : 0;
@@ -534,18 +542,51 @@ export function generateRegularOTShift(
 
   const weekendEarnings = weekendHoursWorked * 2.25;
 
+  let OTStatReg = 0;
+  let OTSuperStat = 0;
+  let baseHoursWorked = 0;
+  let shiftStartDay = DateTime.fromJSDate(shiftStartForOT);
+  let shiftEndDay = DateTime.fromJSDate(shiftEndForOT);
+
+  // Check if shift starts or ends on any of the stat days
+  const isOnStatDay = statDays2024.some((statDay) => {
+    const statDayDateTime = DateTime.fromISO(statDay);
+    return (
+      shiftStartDay.hasSame(statDayDateTime, "day") ||
+      shiftEndDay.hasSame(statDayDateTime, "day")
+    );
+  });
+  if (isOnStatDay) {
+    ({ baseHoursWorked, OTStatReg, OTSuperStat } =
+      getHoursWorkedWithStatPremium(
+        userInfo,
+        undefined,
+        shiftStartForOT,
+        shiftEndForOT
+      ));
+    // first 12 hour earnings should be 0 if the whole shift was worked on a stat day, but in the 2 cases when a shift is either started before a stat or started on a stat and then finished on a non state day, this function returns however many hours were worked on the non stat in the baseHoursWorked variable, in these cases all those hours worked on the non stat are paid at 1.5x wage - need to account for overtime shifts that are over 12 hours long and cross from stat days to non stat days and vice versa TODO
+    first12HoursEarnings =
+      baseHoursWorked * (parseFloat(userInfo.hourlyWage) * 1.5);
+    hoursAbove12Earnings = 0;
+    regOTHours = baseHoursWorked;
+  }
+
   const dayTotal =
     alphaNightsEarnings +
     nightEarnings +
     weekendEarnings +
     first12HoursEarnings +
-    hoursAbove12Earnings;
+    hoursAbove12Earnings +
+    OTStatReg * (parseFloat(userInfo.hourlyWage) * 2) +
+    OTSuperStat * (parseFloat(userInfo.hourlyWage) * 2.5);
 
   return {
     date,
     rotation: "Reg OT",
     baseHoursWorked: 0,
     baseWageEarnings: 0,
+    OTStatReg,
+    OTSuperStat,
     shiftStart,
     shiftEnd,
     nightHoursWorked,
@@ -735,4 +776,38 @@ export function generateVacationBlock(
     );
   }
   return data;
+}
+
+export function generateFullPaidSickDay(
+  userInfo: IUserDataForDB,
+  date: IScheduleItem,
+  shiftStart: Date,
+  shiftEnd: Date
+) {
+  // Alpha employees shifts are always 12 hours, Bravo/Charlie are always 11
+  const sickPaidHours = userInfo.shiftPattern === "Alpha" ? 12 : 11;
+  const nightHoursWorked = 0;
+  const weekendHoursWorked = 0;
+  const sickPaidEarnings = sickPaidHours * parseFloat(userInfo.hourlyWage);
+  const nightEarnings = 0;
+  const weekendEarnings = 0;
+  const alphaNightsEarnings = 0;
+  const dayTotal = sickPaidEarnings;
+
+  return {
+    date: date.date,
+    rotation: "SKPD",
+    shiftStart,
+    shiftEnd,
+    sickPaidHours,
+    nightHoursWorked,
+    weekendHoursWorked,
+    sickPaidEarnings,
+    nightEarnings,
+    alphaNightsEarnings,
+    weekendEarnings,
+    dayTotal,
+    baseHoursWorked: 0,
+    baseWageEarnings: 0,
+  };
 }

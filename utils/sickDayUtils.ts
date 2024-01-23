@@ -8,6 +8,8 @@ import {
   ITwoWeekPayPeriodForClient,
   IUserDataForDB,
 } from "../interfaces/dbInterfaces";
+import { DateTime } from "luxon";
+import { FieldValue } from "firebase-admin/firestore";
 
 export const updateSickDaysInPayPeriod = async (
   responseData: ITwoWeekPayPeriodForClient[],
@@ -75,12 +77,16 @@ export const addWholeSickDayToDB = async (
   date: string
 ) => {
   try {
-    const data = {
+    let data = {
       wholeShift: true,
       index,
       rotation,
       payDay,
+      firstFive: true,
     };
+    let { year } = DateTime.fromISO(date);
+
+    await updateFirstFiveSickDays(userInfo, year, date, data, monthAndYear);
 
     const res = await db
       .collection("sickHours")
@@ -88,7 +94,7 @@ export const addWholeSickDayToDB = async (
       .collection(userInfo.id)
       .doc(date)
       .set(data);
-    console.log("Document written with ID: ", res.writeTime);
+    console.log("Sick Hours Document written with ID: ", res.writeTime);
   } catch (e) {
     console.error("Error adding document: ", e);
   }
@@ -125,5 +131,96 @@ export const addPartialSickDayToDB = async (
     console.log("Document written with ID: ", res.writeTime);
   } catch (e) {
     console.error("Error adding document: ", e);
+  }
+};
+
+const updateFirstFiveSickDays = async (
+  userInfo: IUserDataForDB,
+  year: number,
+  date: string,
+  data: any,
+  monthAndYear: string
+) => {
+  const firstFiveSickDays = await db
+    .collection("usersFiveSickDays")
+    .doc(userInfo.id)
+    .get();
+
+  if (!firstFiveSickDays.exists) {
+    let dateForFirstFive: object[] = [];
+    // need to store the monthAndYear in this object, because when the date comparisons eventually get done, and the old latest sick day needs to be updated, it will need to be accessed in the database with its monthAndYear document key
+    dateForFirstFive.push({ date, monthAndYear });
+    let dates = {
+      [year]: dateForFirstFive,
+    };
+    const response = await db
+      .collection("usersFiveSickDays")
+      .doc(userInfo.id)
+      .set(dates);
+  } else {
+    // in this branch the collection exists, now need to check if the year being added exists and the length of the existing array
+    let sickDayYears = firstFiveSickDays.data();
+    // if the year the user is logging a sick day for exists and they have logged less than 5 sick days
+    if (sickDayYears![year] && sickDayYears![year].length < 5) {
+      console.log(sickDayYears![year]);
+      await db
+        .collection("usersFiveSickDays")
+        .doc(userInfo.id)
+        .update({
+          [year]: FieldValue.arrayUnion({ date, monthAndYear }),
+        });
+    } else if (
+      // this scenarios is when the array exists, and the user has previously logged 5 sick days, here the previous 5 need to be compared to the date being added and checked if the new date is before any of the previous dates chronologically, if it is, then it needs to be added to this array and the last date chronologically needs to be removed
+      sickDayYears![year] &&
+      sickDayYears![year].length === 5
+    ) {
+      // Find the latest entry dynamically
+      const latestEntry = sickDayYears![year].reduce(
+        (latest: any, entry: any) => {
+          const currentDate = new Date(entry.date);
+          return !latest || currentDate > new Date(latest.date)
+            ? entry
+            : latest;
+        },
+        null
+      );
+      // if the date being sent to the server is before the latest date, update the array, and update the previous latest date to have the first Five boolean now flipped to false
+      if (new Date(date) < new Date(latestEntry.date)) {
+        let indexOfLatest = sickDayYears![year].findIndex(
+          (entry: any) => entry.date === latestEntry.date
+        );
+        // this is updating the old array with the new object at the index of the previous latest sick day
+        sickDayYears![year][indexOfLatest] = { date, monthAndYear };
+
+        // update the firstFiveSick days with this new array
+        await db
+          .collection("usersFiveSickDays")
+          .doc(userInfo.id)
+          .update({
+            [year]: sickDayYears![year],
+          });
+
+        // take the previous latest sick day, find it in the db based of its monthAndYear, and flip the boolean to false so next time it is fetched it is fetched as a stiip day and not a fullPay Day
+        await db
+          .collection("sickHours")
+          .doc(latestEntry.monthAndYear)
+          .collection(userInfo.id)
+          .doc(new Date(latestEntry.date).toISOString())
+          .update({ firstFive: false });
+      } else {
+        // in this branch the date being added is later than the first five sick days, so the data that is going to be saved needs to have the boolean flipped to false before the sick day gets saved
+        data.firstFive = false;
+      }
+    } else {
+      // in this branch the collection usersFiveSickDays existed, but the year being added had not
+      let dateForFirstFive: object[] = [];
+      dateForFirstFive.push({ date, monthAndYear });
+      const response = await db
+        .collection("usersFiveSickDays")
+        .doc(userInfo.id)
+        .update({
+          [year]: dateForFirstFive,
+        });
+    }
   }
 };

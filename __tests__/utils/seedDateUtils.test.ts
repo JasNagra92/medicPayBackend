@@ -6,7 +6,7 @@ import { IUserDataForDB } from "../../interfaces/dbInterfaces";
 
 describe("getMonthsPayPeriodsFromYearAndPlatoon", () => {
   it("should return the given months pay period data with the correct rotations for a platoon, year, and month", () => {
-    let data = getPayPeriodFromMonthYearAndPlatoon("A", "R1", 3, 2023);
+    let data = getPayPeriodFromMonthYearAndPlatoon("A", 3, 2023, "R1");
   });
 });
 
@@ -23,7 +23,7 @@ describe("getEIDeductionsForYear", () => {
       nightShiftEndTime: { hours: 6, minutes: 0 },
       hourlyWage: "43.13",
     };
-    let data = getDeductionsForYear("D", "R1", 2024, userInfoFromRequest);
+    let data = getDeductionsForYear("D", 2024, userInfoFromRequest, "R1");
     console.log(data);
   });
 });

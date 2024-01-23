@@ -61,6 +61,9 @@ export interface ISingleDaysPayDataForClient {
   weekendEarnings: number;
   dayTotal: number;
   stiipHours?: number;
+  // first 5 sick days of the year will have the hours worked under this property
+  sickPaidHours?: number;
+  sickPaidEarnings?: number;
   OTDoubleTime?: number;
   OTOnePointFive?: number;
 }

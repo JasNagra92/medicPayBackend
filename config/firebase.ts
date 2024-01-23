@@ -1,5 +1,5 @@
 // Import the functions you need from the SDKs you need
-import { initializeApp, applicationDefault, cert } from "firebase-admin/app";
+import { initializeApp, cert } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import "dotenv/config";
 
