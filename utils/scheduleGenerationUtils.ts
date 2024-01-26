@@ -780,10 +780,15 @@ export function generateVacationBlock(
 
 export function generateFullPaidSickDay(
   userInfo: IUserDataForDB,
-  date: IScheduleItem,
-  shiftStart: Date,
-  shiftEnd: Date
+  date: string,
+  rotation: string
 ) {
+  const day = {
+    date: new Date(date),
+    rotation,
+  };
+  const shiftStart = generateStartTimeDate(day, userInfo);
+  const shiftEnd = generateEndTimeDate(day, userInfo);
   // Alpha employees shifts are always 12 hours, Bravo/Charlie are always 11
   const sickPaidHours = userInfo.shiftPattern === "Alpha" ? 12 : 11;
   const nightHoursWorked = 0;
@@ -795,7 +800,7 @@ export function generateFullPaidSickDay(
   const dayTotal = sickPaidEarnings;
 
   return {
-    date: date.date,
+    date: day.date,
     rotation: "SKPD",
     shiftStart,
     shiftEnd,
@@ -809,5 +814,66 @@ export function generateFullPaidSickDay(
     dayTotal,
     baseHoursWorked: 0,
     baseWageEarnings: 0,
+  };
+}
+
+export function generateFullPaidPartialSickDay(
+  userInfo: IUserDataForDB,
+  day: IScheduleItem,
+  shiftStart: Date,
+  updatedShiftEnd: Date,
+  originalShiftEnd: Date
+) {
+  const shiftStartForStiip = new Date(shiftStart);
+  const originalShiftEndForStiip = new Date(originalShiftEnd);
+  const shiftEndForStiip = new Date(updatedShiftEnd);
+
+  const baseHoursWorked = getHoursWorked(shiftStartForStiip, shiftEndForStiip);
+  const nightHoursWorked = getNightShiftPremiumHoursWorked(
+    shiftStartForStiip,
+    shiftEndForStiip
+  );
+  const weekendHoursWorked = getWeekendPremiumHoursWorked(
+    shiftStartForStiip,
+    shiftEndForStiip
+  );
+
+  const baseWageEarnings = baseHoursWorked * parseFloat(userInfo.hourlyWage);
+  const nightEarnings = nightHoursWorked * 2.0;
+
+  let alphaNightsEarnings;
+  alphaNightsEarnings =
+    userInfo.shiftPattern === "Alpha" ? nightHoursWorked * 3.6 : 0;
+
+  const weekendEarnings = weekendHoursWorked * 2.25;
+
+  const sickPaidHours =
+    (originalShiftEndForStiip.getTime() - shiftEndForStiip.getTime()) /
+    (1000 * 60 * 60);
+
+  const sickPaidEarnings = sickPaidHours * parseFloat(userInfo.hourlyWage);
+
+  const dayTotal =
+    baseWageEarnings +
+    alphaNightsEarnings +
+    nightEarnings +
+    weekendEarnings +
+    sickPaidEarnings;
+
+  return {
+    date: day.date,
+    rotation: day.rotation,
+    shiftStart,
+    shiftEnd: updatedShiftEnd,
+    baseHoursWorked,
+    nightHoursWorked,
+    weekendHoursWorked,
+    baseWageEarnings,
+    nightEarnings,
+    alphaNightsEarnings,
+    weekendEarnings,
+    dayTotal,
+    sickPaidHours,
+    sickPaidEarnings,
   };
 }

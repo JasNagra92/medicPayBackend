@@ -33,6 +33,8 @@ import {
   updateHolidayBlocksInPayPeriod,
 } from "../utils/overtimeUtils";
 import { addHolidayBlockToDB, removeDayFromDB } from "../utils/databaseUtils";
+import { db } from "../config/firebase";
+import { FieldValue } from "firebase-admin/firestore";
 
 export const getMonthsPayPeriodData = async (
   req: IRequestForPayDayData,
@@ -99,15 +101,14 @@ export const getWholeStiipData = async (
   res: Response
 ) => {
   const { userInfo, date, rotation, payDay, index } = req.body;
-  const singleDayWholeStiip = generateWholeStiipShift(userInfo, date, rotation);
-
+  let stiipData;
   if (index && payDay) {
     const monthAndYear = new Date(payDay).toLocaleDateString("en-US", {
       month: "long",
       year: "numeric",
     });
-    // since user is marking a day when they used sick time, save the date and the index within that pay period that they used it
-    await addWholeSickDayToDB(
+    // since user is marking a day when they used sick time, save the date and the index within that pay period that they used it, database function will check if date being added is within the first 5 sick days of the year for the user and return the correct stiip pay data
+    stiipData = await addWholeSickDayToDB(
       userInfo,
       index,
       rotation,
@@ -116,7 +117,7 @@ export const getWholeStiipData = async (
       date
     );
   }
-  res.status(200).send({ data: singleDayWholeStiip });
+  res.status(200).send({ data: stiipData });
 };
 
 export const getPartialStiipData = async (
@@ -134,24 +135,12 @@ export const getPartialStiipData = async (
     originalShiftEnd,
   } = req.body;
 
-  let day = {
-    date: new Date(date),
-    rotation,
-  };
-  const dayWithParitalStiip = generatePartialStiipDaysDataForClient(
-    userInfo,
-    day,
-    shiftStart,
-    updatedShiftEnd,
-    originalShiftEnd
-  );
-
   const monthAndYear = new Date(payDay).toLocaleDateString("en-US", {
     month: "long",
     year: "numeric",
   });
 
-  await addPartialSickDayToDB(
+  const stiipData = await addPartialSickDayToDB(
     userInfo,
     index,
     rotation,
@@ -163,7 +152,7 @@ export const getPartialStiipData = async (
     originalShiftEnd
   );
 
-  res.status(200).send({ data: dayWithParitalStiip });
+  res.status(200).send({ data: stiipData });
 };
 
 export const getSingleDaysWorkData = async (
@@ -202,6 +191,19 @@ export const getSingleDaysWorkData = async (
   });
   // if request was sent with a collection and monthAndYear property, use those along with the userUUID to delete the document matching the date also sent with req.body
   if (collectionInDB && monthAndYear) {
+    if (collectionInDB === "sickHours") {
+      // if they are deleting a sickHours entry, the users first five sick days collection must also be updated and the corresponding date deleted
+      // the collection will always exist in this branch because it would have been created when they first logged a sick day, they could not be deleting a sick day without logging it first
+      let shiftDT = DateTime.fromISO(date);
+      db.collection("usersFiveSickDays")
+        .doc(userInfo.id)
+        .update({
+          [shiftDT.year]: FieldValue.arrayRemove({
+            date,
+            monthAndYear,
+          }),
+        });
+    }
     await removeDayFromDB(
       userInfo,
       collectionInDB,

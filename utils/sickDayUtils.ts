@@ -1,8 +1,10 @@
 import { format } from "date-fns";
 import { db } from "../config/firebase";
 import {
+  generateFullPaidSickDay,
   generatePartialStiipDaysDataForClient,
   generateWholeStiipShift,
+  generateFullPaidPartialSickDay,
 } from "../utils/scheduleGenerationUtils";
 import {
   ITwoWeekPayPeriodForClient,
@@ -85,7 +87,9 @@ export const addWholeSickDayToDB = async (
       firstFive: true,
     };
     let { year } = DateTime.fromISO(date);
+    let stiipData;
 
+    // this await call will modify the data object and flip firstFive to false if the day being added is later in the year than the users previous 5 first logged sick days chronologically
     await updateFirstFiveSickDays(userInfo, year, date, data, monthAndYear);
 
     const res = await db
@@ -95,6 +99,15 @@ export const addWholeSickDayToDB = async (
       .doc(date)
       .set(data);
     console.log("Sick Hours Document written with ID: ", res.writeTime);
+
+    // in this branch generate stiip data that is for a day that falls within the first five sick days the user has logged in year chronologically
+    if (data.firstFive) {
+      stiipData = generateFullPaidSickDay(userInfo, date, rotation);
+    } else {
+      stiipData = generateWholeStiipShift(userInfo, date, rotation);
+    }
+
+    return stiipData;
   } catch (e) {
     console.error("Error adding document: ", e);
   }
@@ -112,7 +125,7 @@ export const addPartialSickDayToDB = async (
   originalShiftEnd: Date
 ) => {
   try {
-    const data = {
+    let data = {
       wholeShift: false,
       index,
       rotation,
@@ -120,7 +133,14 @@ export const addPartialSickDayToDB = async (
       shiftStart,
       originalShiftEnd,
       updatedShiftEnd,
+      firstFive: true,
     };
+
+    let { year } = DateTime.fromISO(date);
+    let stiipData;
+
+    // this await call will modify the data object and flip firstFive to false if the day being added is later in the year than the users previous 5 first logged sick days chronologically
+    await updateFirstFiveSickDays(userInfo, year, date, data, monthAndYear);
 
     const res = await db
       .collection("sickHours")
@@ -129,6 +149,27 @@ export const addPartialSickDayToDB = async (
       .doc(date)
       .set(data);
     console.log("Document written with ID: ", res.writeTime);
+
+    // in this branch generate stiip data that is for a day that falls within the first five sick days the user has logged in year chronologically
+    if (data.firstFive) {
+      // this function will pay out base wage for the hours booked off on SKPD if the shift is one of the first five sick days in the year, the SKPD hours do not generate shift premiums and the hours worked fall under sickPaidHours and sickPaidEarnings adds to the dayTotal
+      stiipData = generateFullPaidPartialSickDay(
+        userInfo,
+        { date: new Date(date), rotation },
+        shiftStart,
+        updatedShiftEnd,
+        originalShiftEnd
+      );
+    } else {
+      stiipData = generatePartialStiipDaysDataForClient(
+        userInfo,
+        { date: new Date(date), rotation },
+        shiftStart,
+        updatedShiftEnd,
+        originalShiftEnd
+      );
+    }
+    return stiipData;
   } catch (e) {
     console.error("Error adding document: ", e);
   }
@@ -162,7 +203,6 @@ const updateFirstFiveSickDays = async (
     let sickDayYears = firstFiveSickDays.data();
     // if the year the user is logging a sick day for exists and they have logged less than 5 sick days
     if (sickDayYears![year] && sickDayYears![year].length < 5) {
-      console.log(sickDayYears![year]);
       await db
         .collection("usersFiveSickDays")
         .doc(userInfo.id)
