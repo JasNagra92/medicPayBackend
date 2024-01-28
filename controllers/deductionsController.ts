@@ -40,7 +40,7 @@ export const getDeductions = async (
   //   calculate union dues, function deducts 8.29 uniform allowance during calculations
   const unionDues = calculateUnionDues(incomeLessLevelling);
 
-  //   income figure for pension contribution deductions Overtime and uniform allowance, and considers stiiphours at users normal hourly rate, not stiip rate of .75%
+  //   income figure for pension contribution deducts Overtime and uniform allowance, and considers stiiphours at users normal hourly rate, not stiip rate of .75%
   let incomeLessOTLessStiip =
     grossIncome -
     8.29 -
@@ -49,7 +49,6 @@ export const getDeductions = async (
     (OTDoubleTimeAmount ? OTDoubleTimeAmount : 0) -
     (OTStatReg ? OTStatReg * parseFloat(userInfo.hourlyWage) : 0) -
     (OTSuperStat ? OTSuperStat * (parseFloat(userInfo.hourlyWage) * 1.5) : 0);
-  // factor in super stat for new years and christmas - todo
 
   const additionForPserp = stiipHours * parseFloat(userInfo.hourlyWage);
   incomeLessOTLessStiip = incomeLessOTLessStiip + additionForPserp;
