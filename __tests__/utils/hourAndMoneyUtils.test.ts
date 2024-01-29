@@ -8,10 +8,6 @@ import {
 
 import { IUserDataForDB } from "../../interfaces/dbInterfaces";
 
-const baseRate: number = 43.13;
-const nightShiftPremium: number = 5.6;
-const weekendPremium: number = 2.25;
-
 describe("getHoursWorked", () => {
   it("returns 12 when given 2 start times 12 hours apart", () => {
     const startTime: Date = new Date(2023, 9, 5, 18, 0, 0);
