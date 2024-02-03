@@ -285,7 +285,7 @@ export function generateSingleDaysDataForClient(
       ? 0
       : getHoursWorked(shiftStart, shiftEnd);
 
-  if (day.rotation !== "day off") {
+  if (day.rotation !== "day off" && day.rotation !== "R Day") {
     if (isWholeShiftOnStatDay(userInfo, day)) {
       // if the entire shift took place on a stat day, the base hours variable will be 0 in order to reduce levelling, and instead of directly increasing levelling, the levelling calculation on the front end will add the OTStatReg variable hours into the equation
       OTStatReg = baseHoursWorked;

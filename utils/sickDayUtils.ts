@@ -38,27 +38,53 @@ export const updateSickDaysInPayPeriod = async (
         (period) => format(period.payDay, "PP") === doc.data().payDay
       );
 
-      // only generate whole stiip shift data if document returned had the wholeShift boolean set to true
+      // only generate whole stiip shift data if document returned had the wholeShift boolean set to true, also check if firstFive is true and then send in a SKPD day back
       if (doc.data().wholeShift) {
-        const wholeSickDaysWorkData = generateWholeStiipShift(
-          userInfo,
-          doc.id,
-          doc.data().rotation
-        );
+        let wholeSickDaysWorkData;
+        if (doc.data().firstFive) {
+          wholeSickDaysWorkData = generateFullPaidSickDay(
+            userInfo,
+            doc.id,
+            doc.data().rotation
+          );
+        } else {
+          wholeSickDaysWorkData = generateWholeStiipShift(
+            userInfo,
+            doc.id,
+            doc.data().rotation
+          );
+        }
         if (payPeriodToUpdate) {
           payPeriodToUpdate.workDaysInPayPeriod[doc.data().index] =
             wholeSickDaysWorkData;
         }
       } else {
-        const { rotation, shiftStart, updatedShiftEnd, originalShiftEnd } =
-          doc.data();
-        const partialSickDaysWorkData = generatePartialStiipDaysDataForClient(
-          userInfo,
-          { date: new Date(doc.id), rotation },
-          new Date(shiftStart),
-          new Date(updatedShiftEnd),
-          new Date(originalShiftEnd)
-        );
+        const {
+          rotation,
+          shiftStart,
+          updatedShiftEnd,
+          originalShiftEnd,
+          firstFive,
+        } = doc.data();
+        // check if its a first five
+        let partialSickDaysWorkData;
+        if (firstFive) {
+          partialSickDaysWorkData = generateFullPaidPartialSickDay(
+            userInfo,
+            { date: new Date(doc.id), rotation },
+            new Date(shiftStart),
+            new Date(updatedShiftEnd),
+            new Date(originalShiftEnd)
+          );
+        } else {
+          partialSickDaysWorkData = generatePartialStiipDaysDataForClient(
+            userInfo,
+            { date: new Date(doc.id), rotation },
+            new Date(shiftStart),
+            new Date(updatedShiftEnd),
+            new Date(originalShiftEnd)
+          );
+        }
         if (payPeriodToUpdate) {
           payPeriodToUpdate.workDaysInPayPeriod[doc.data().index] =
             partialSickDaysWorkData;
