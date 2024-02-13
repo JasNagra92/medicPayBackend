@@ -26,7 +26,8 @@
   "keywords": [],
   "author": "",
   "engines": {
-    "node": "18.18.0"
+    "node": "18.18.0",
+    "npm": "10.2.5"
   },
   "license": "ISC",
   "dependencies": {
