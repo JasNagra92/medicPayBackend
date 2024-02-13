@@ -4,7 +4,7 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "build": "npm tsc",
+    "build": "npm run tsc",
     "tsc": "./node_modules/typescript/bin/tsc",
     "start": "node ./dist/server.js",
     "test": "cross-env NODE_ENV='development' jest --runInBand --detectOpenHandles",
