@@ -4,7 +4,7 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "compile": "npx tsc",
+    "build": "tsc",
     "start": "node ./dist/server.js",
     "test": "cross-env NODE_ENV='development' jest --runInBand --detectOpenHandles",
     "dev": "concurrently \"npx tsc --watch\" \"nodemon -q ./dist/server.js\"",
@@ -60,6 +60,6 @@
     "nodemon": "^3.0.1",
     "supertest": "^6.3.3",
     "ts-jest": "^29.1.1",
-    "typescript": "^5.2.2"
+    "typescript": "^5.3.3"
   }
 }
