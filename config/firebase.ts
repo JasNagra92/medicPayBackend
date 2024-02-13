@@ -3,7 +3,7 @@ import { initializeApp, cert } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import "dotenv/config";
 
-let serviceAccount = require("/google-credentials.json");
+let serviceAccount = require("/app/google-credentials.json");
 if (process.env.NODE_ENV === "dev") {
   serviceAccount = require("/Users/jasnagra/downloads/google-credentials.json");
 }
