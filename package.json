@@ -4,8 +4,8 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "build": "npx tsc",
-    "start": "NODE_ENV=development nodemon server.ts",
+    "compile": "npx tsc",
+    "start": "node ./dist/server.js",
     "test": "cross-env NODE_ENV='development' jest --runInBand --detectOpenHandles",
     "dev": "concurrently \"npx tsc --watch\" \"nodemon -q ./dist/server.js\"",
     "kill": "npx kill-port 4000 8080 8000 8085 4500 4400 4401 4501"
@@ -24,6 +24,9 @@
   },
   "keywords": [],
   "author": "",
+  "engines": {
+    "node": "18.18.0"
+  },
   "license": "ISC",
   "dependencies": {
     "@types/cors": "^2.8.15",
