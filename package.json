@@ -8,7 +8,7 @@
     "tsc": "./node_modules/typescript/bin/tsc",
     "start": "node ./dist/server.js",
     "test": "cross-env NODE_ENV='development' jest --runInBand --detectOpenHandles",
-    "dev": "concurrently \"npx tsc --watch\" \"nodemon -q ./dist/server.js\"",
+    "dev": "concurrently \"npx tsc --watch\" \"nodemon -q NODE_ENV='dev' ./dist/server.js\"",
     "kill": "npx kill-port 4000 8080 8000 8085 4500 4400 4401 4501"
   },
   "jest": {

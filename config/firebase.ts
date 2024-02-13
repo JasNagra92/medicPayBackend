@@ -3,7 +3,10 @@ import { initializeApp, cert } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import "dotenv/config";
 
-const serviceAccount = require("/Users/jasnagra/Downloads/medicpay-a8230-459a1356f0d7.json");
+let serviceAccount = require("/Users/jasnagra/Downloads/google-credentials.json");
+if (process.env.NODE_ENV === "dev") {
+  serviceAccount = require("/Users/jasnagra/downloads/google-credentials.json");
+}
 
 // Initialize Firebase
 const app = initializeApp({ credential: cert(serviceAccount) });
