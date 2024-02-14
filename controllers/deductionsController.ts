@@ -11,7 +11,7 @@ import {
   calculateUnionDues,
   updateDeductionsInDB,
 } from "./../utils/databaseUtils";
-import { Response } from "express";
+import { Request, Response } from "express";
 import { db } from "../config/firebase";
 import { DateTime } from "luxon";
 
@@ -171,4 +171,33 @@ export const getDeductions = async (
       netIncome: Number(netIncome.toFixed(2)),
     },
   });
+};
+
+export const getYTD = async (req: Request, res: Response) => {
+  const { userInfo } = req.body;
+  try {
+    let doc = await db.collection("Deductions").doc(userInfo.id).get();
+    if (doc && doc.exists) {
+      let deductions: IDeductions[] = doc.data()!.deductions;
+      let monthsIncome = deductions.map((entry) => {
+        return { income: entry.grossIncome, month: entry.payDay };
+      });
+      let lastEntryYTD = deductions[deductions.length - 1].YTDIncome;
+      res.status(200).send({ YTDIncome: lastEntryYTD, months: monthsIncome });
+    }
+  } catch (error) {
+    console.log(error);
+  }
+};
+export const getSickHours = async (req: Request, res: Response) => {
+  const { userInfo } = req.body;
+  try {
+    let doc = await db.collection("totalSickHours").doc(userInfo.id).get();
+    if (doc && doc.exists) {
+      let totalHours = doc.data();
+      res.status(200).send({ totalHours });
+    }
+  } catch (error) {
+    console.log(error);
+  }
 };

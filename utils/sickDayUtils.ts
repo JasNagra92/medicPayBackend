@@ -131,6 +131,32 @@ export const addWholeSickDayToDB = async (
       stiipData = generateFullPaidSickDay(userInfo, date, rotation);
     } else {
       stiipData = generateWholeStiipShift(userInfo, date, rotation);
+      // after generating a 12 hour stiip shift, add 12 hours to the db doc that counts total STIIP hours logged by user
+      // Get a reference to the document
+      const totalSickHoursRef = db
+        .collection("totalSickHours")
+        .doc(userInfo.id);
+
+      // Fetch the document
+      totalSickHoursRef
+        .get()
+        .then((doc) => {
+          if (doc.exists) {
+            // If the document exists, update the totalHours field by adding 12
+            const currentTotalHours = doc.data()!.totalHours || 0;
+            const newTotalHours = currentTotalHours + 12;
+            return totalSickHoursRef.update({ totalHours: newTotalHours });
+          } else {
+            // If the document doesn't exist, set the totalHours field to 12
+            return totalSickHoursRef.set({ totalHours: 12 });
+          }
+        })
+        .then(() => {
+          console.log("Total hours updated successfully.");
+        })
+        .catch((error) => {
+          console.error("Error updating total hours: ", error);
+        });
     }
 
     return stiipData;
@@ -194,6 +220,40 @@ export const addPartialSickDayToDB = async (
         updatedShiftEnd,
         originalShiftEnd
       );
+      // calculate stiip hours used
+      let updatedShiftDT = DateTime.fromISO(updatedShiftEnd as any);
+      let originalShiftDT = DateTime.fromISO(originalShiftEnd as any);
+      const hoursDifference = originalShiftDT.diff(
+        updatedShiftDT,
+        "hours"
+      ).hours;
+
+      // after generating a partial stiip shift, add the hours to the db doc that counts total STIIP hours logged by user
+      // Get a reference to the document
+      const totalSickHoursRef = db
+        .collection("totalSickHours")
+        .doc(userInfo.id);
+
+      // Fetch the document
+      totalSickHoursRef
+        .get()
+        .then((doc) => {
+          if (doc.exists) {
+            // If the document exists, update the totalHours field by adding the hourly difference
+            const currentTotalHours = doc.data()!.totalHours || 0;
+            const newTotalHours = currentTotalHours + hoursDifference;
+            return totalSickHoursRef.update({ totalHours: newTotalHours });
+          } else {
+            // If the document doesn't exist, set the totalHours field to the hoursDifference
+            return totalSickHoursRef.set({ totalHours: hoursDifference });
+          }
+        })
+        .then(() => {
+          console.log("Total hours updated successfully.");
+        })
+        .catch((error) => {
+          console.error("Error updating total hours: ", error);
+        });
     }
     return stiipData;
   } catch (e) {

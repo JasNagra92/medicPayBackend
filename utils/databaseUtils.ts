@@ -5,6 +5,7 @@ import {
 } from "./../interfaces/dbInterfaces";
 import { db } from "../config/firebase";
 import { getDeductionsForYear } from "./seedDateUtils";
+import { DateTime } from "luxon";
 
 export const saveUserToDB = async (user: IUserDataForDB) => {
   try {
@@ -124,6 +125,39 @@ export const removeDayFromDB = async (
   date: Date
 ) => {
   try {
+    // Get the document
+    const docRef = db
+      .collection(collectionInDB)
+      .doc(monthAndYear)
+      .collection(userInfo.id)
+      .doc(date.toISOString());
+
+    const doc = await docRef.get();
+    if (!doc.exists) {
+      throw new Error("Document not found.");
+    }
+
+    const data = doc.data();
+    if (data?.wholeShift) {
+      try {
+        // If wholeShift is true, reduce the totalHours by 12
+        await reduceTotalHoursBy(userInfo.id, 12);
+      } catch (error) {
+        console.log(error);
+      }
+    } else {
+      // if whole shift is false it is a partial sick day
+      if (data?.updatedShiftEnd && data?.originalShiftEnd) {
+        const updatedEndDT = DateTime.fromISO(data.updatedShiftEnd);
+        const originalEndDT = DateTime.fromISO(data.originalShiftEnd);
+        const hoursDifference = originalEndDT.diff(updatedEndDT, "hours").hours;
+        console.log(hoursDifference);
+        await reduceTotalHoursBy(userInfo.id, hoursDifference);
+      } else {
+        throw new Error("Missing updatedShiftEnd or originalShiftEnd fields.");
+      }
+    }
+
     const response = await db
       .collection(collectionInDB)
       .doc(monthAndYear)
@@ -136,6 +170,23 @@ export const removeDayFromDB = async (
     throw error;
   }
 };
+
+async function reduceTotalHoursBy(userId: string, hours: number) {
+  try {
+    const totalHoursRef = db.collection("totalSickHours").doc(userId);
+    const totalHoursDoc = await totalHoursRef.get();
+    if (!totalHoursDoc.exists) {
+      console.warn("Total hours document not found.");
+      return;
+    }
+    const currentTotalHours = totalHoursDoc.data()!.totalHours || 0;
+    const newTotalHours = Math.max(currentTotalHours - hours, 0); // Ensure totalHours doesn't go below 0
+    await totalHoursRef.update({ totalHours: newTotalHours });
+  } catch (error) {
+    console.error("Error reducing total hours: ", error);
+    throw error;
+  }
+}
 
 export const addHolidayBlockToDB = async (
   userInfo: IUserDataForDB,
