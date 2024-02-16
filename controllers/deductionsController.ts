@@ -173,6 +173,17 @@ export const getDeductions = async (
   });
 };
 
+export const resetDeductions = async (req: Request, res: Response) => {
+  const { userInfo } = req.body;
+  try {
+    await addDeductionsToDB(userInfo, 2024);
+    res.status(200).send({ data: "deductions reset with new info" });
+  } catch (error) {
+    console.log("error resetting deductions");
+    res.status(200).send({ data: "error resetting deductions" });
+  }
+};
+
 export const getYTD = async (req: Request, res: Response) => {
   const { userInfo } = req.body;
   try {
@@ -182,8 +193,7 @@ export const getYTD = async (req: Request, res: Response) => {
       let monthsIncome = deductions.map((entry) => {
         return { income: entry.grossIncome, month: entry.payDay };
       });
-      let lastEntryYTD = deductions[deductions.length - 1].YTDIncome;
-      res.status(200).send({ YTDIncome: lastEntryYTD, months: monthsIncome });
+      res.status(200).send({ months: monthsIncome });
     }
   } catch (error) {
     console.log(error);
@@ -196,6 +206,33 @@ export const getSickHours = async (req: Request, res: Response) => {
     if (doc && doc.exists) {
       let totalHours = doc.data();
       res.status(200).send({ totalHours });
+    } else {
+      res.status(200).send({ totalHours: 0 });
+    }
+  } catch (error) {
+    console.log(error);
+  }
+};
+export const getOTHours = async (req: Request, res: Response) => {
+  const { userInfo } = req.body;
+  try {
+    let doc = await db.collection("totalOTHours").doc(userInfo.id).get();
+    if (doc && doc.exists) {
+      let { totalOTHours, totalRecallHours, totalLateCallHours }: any =
+        doc.data();
+      res
+        .status(200)
+        .send({
+          data: {
+            totalOTHours: totalOTHours ? totalOTHours : 0,
+            totalRecallHours: totalRecallHours ? totalRecallHours : 0,
+            totalLateCallHours: totalLateCallHours ? totalLateCallHours : 0,
+          },
+        });
+    } else {
+      res
+        .status(200)
+        .send({ totalOTHours: 0, totalRecallHours: 0, totalLateCallHours: 0 });
     }
   } catch (error) {
     console.log(error);

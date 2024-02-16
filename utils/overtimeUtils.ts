@@ -12,6 +12,7 @@ import {
   generateVacationShift,
   generateRDayOTShift,
 } from "./scheduleGenerationUtils";
+import { DateTime } from "luxon";
 
 export const addLateCallToDB = async (
   userInfo: IUserDataForDB,
@@ -41,6 +42,13 @@ export const addLateCallToDB = async (
       .collection(userInfo.id)
       .doc(date)
       .set(data);
+
+    addOTHoursToDB(
+      userInfo,
+      originalShiftEnd,
+      updatedShiftEnd,
+      "totalLateCallHours"
+    );
   } catch (error) {
     console.log(error);
   }
@@ -55,46 +63,74 @@ export const addOvertimeToDB = async (
   OTAlphaShift: string,
   prevRotation?: string
 ) => {
-  if (OTShift.rotation === "Reg OT") {
-    try {
-      const data = {
-        index,
-        rotation: OTShift.rotation,
-        payDay,
-        shiftStart: OTShift.shiftStart,
-        shiftEnd: OTShift.shiftEnd,
-        OTAlphaShift,
-      };
-      const res = await db
-        .collection("overtimeHours")
-        .doc(monthAndYear)
-        .collection(userInfo.id)
-        .doc(OTShift.date.toISOString())
-        .set(data);
-    } catch (error) {
-      console.log(error);
+  const data = {
+    index,
+    rotation: OTShift.rotation,
+    payDay,
+    shiftStart: OTShift.shiftStart,
+    shiftEnd: OTShift.shiftEnd,
+    OTAlphaShift,
+    ...(OTShift.rotation !== "Reg OT" && { prevRotation }),
+  };
+
+  try {
+    const overtimeHoursRef = db
+      .collection("overtimeHours")
+      .doc(monthAndYear)
+      .collection(userInfo.id)
+      .doc(OTShift.date.toISOString());
+
+    await overtimeHoursRef.set(data);
+
+    if (OTShift.rotation === "Recall") {
+      await addOTHoursToDB(
+        userInfo,
+        OTShift.shiftStart,
+        OTShift.shiftEnd,
+        "totalRecallHours"
+      );
+    } else {
+      await addOTHoursToDB(
+        userInfo,
+        OTShift.shiftStart,
+        OTShift.shiftEnd,
+        "totalOTHours"
+      );
     }
-  } else if (OTShift.rotation === "Recall" || OTShift.rotation === "R Day OT") {
-    try {
-      const data = {
-        index,
-        rotation: OTShift.rotation,
-        payDay,
-        shiftStart: OTShift.shiftStart,
-        shiftEnd: OTShift.shiftEnd,
-        prevRotation,
-      };
-      const res = await db
-        .collection("overtimeHours")
-        .doc(monthAndYear)
-        .collection(userInfo.id)
-        .doc(OTShift.date.toISOString())
-        .set(data);
-    } catch (error) {
-      console.log(error);
-    }
+  } catch (error) {
+    console.error(error);
+    throw error;
   }
 };
+
+async function addOTHoursToDB(
+  userInfo: IUserDataForDB,
+  shiftStart: any,
+  shiftEnd: any,
+  fieldName: string
+) {
+  try {
+    const totalOTHoursRef = db.collection("totalOTHours").doc(userInfo.id);
+
+    const shiftStartDT = DateTime.fromISO(shiftStart);
+    const shiftEndDT = DateTime.fromISO(shiftEnd);
+    const OTHours = shiftEndDT.diff(shiftStartDT, "hours").hours;
+
+    const doc = await totalOTHoursRef.get();
+
+    if (doc.exists) {
+      const currentTotalHours = doc.data()![fieldName] || 0;
+      const newTotalHours = currentTotalHours + OTHours;
+      await totalOTHoursRef.update({ [fieldName]: newTotalHours });
+    } else {
+      await totalOTHoursRef.set({ [fieldName]: OTHours });
+    }
+
+    console.log("Total hours updated successfully.");
+  } catch (error) {
+    console.error("Error updating total hours: ", error);
+  }
+}
 
 export const markHolidayShiftWorked = async (
   monthAndYear: string,

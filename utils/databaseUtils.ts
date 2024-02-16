@@ -138,23 +138,50 @@ export const removeDayFromDB = async (
     }
 
     const data = doc.data();
-    if (data?.wholeShift) {
-      try {
-        // If wholeShift is true, reduce the totalHours by 12
-        await reduceTotalHoursBy(userInfo.id, 12);
-      } catch (error) {
-        console.log(error);
-      }
-    } else {
-      // if whole shift is false it is a partial sick day
-      if (data?.updatedShiftEnd && data?.originalShiftEnd) {
-        const updatedEndDT = DateTime.fromISO(data.updatedShiftEnd);
-        const originalEndDT = DateTime.fromISO(data.originalShiftEnd);
-        const hoursDifference = originalEndDT.diff(updatedEndDT, "hours").hours;
-        console.log(hoursDifference);
-        await reduceTotalHoursBy(userInfo.id, hoursDifference);
+    if (collectionInDB === "sickHours") {
+      if (data?.wholeShift) {
+        try {
+          // If wholeShift is true, reduce the totalHours by 12
+          await reduceTotalSickHoursBy(userInfo.id, 12);
+        } catch (error) {
+          console.log(error);
+        }
       } else {
-        throw new Error("Missing updatedShiftEnd or originalShiftEnd fields.");
+        // if whole shift is false it is a partial sick day
+        if (data?.updatedShiftEnd && data?.originalShiftEnd) {
+          const updatedEndDT = DateTime.fromISO(data.updatedShiftEnd);
+          const originalEndDT = DateTime.fromISO(data.originalShiftEnd);
+          const hoursDifference = originalEndDT.diff(
+            updatedEndDT,
+            "hours"
+          ).hours;
+          console.log(hoursDifference);
+          await reduceTotalSickHoursBy(userInfo.id, hoursDifference);
+        } else {
+          throw new Error(
+            "Missing updatedShiftEnd or originalShiftEnd fields."
+          );
+        }
+      }
+    } else if (collectionInDB === "overtimeHours") {
+      // late call OT reduction
+      if (data!.lateCall) {
+        const { originalShiftEnd, updatedShiftEnd }: any = data;
+        const updatedEndDT = DateTime.fromISO(updatedShiftEnd);
+        const originalEndDT = DateTime.fromISO(originalShiftEnd);
+        const OTHours = updatedEndDT.diff(originalEndDT, "hours").hours;
+        await reduceTotalHoursBy(userInfo.id, OTHours, "totalLateCallHours");
+      } else {
+        // reg OT reduction
+        const { shiftStart, shiftEnd }: any = data;
+        const shiftStartDT = DateTime.fromISO(shiftStart);
+        const shiftEndDT = DateTime.fromISO(shiftEnd);
+        const OTHours = shiftEndDT.diff(shiftStartDT, "hours").hours;
+        if (data!.rotation !== "Recall") {
+          reduceTotalHoursBy(userInfo.id, OTHours, "totalOTHours");
+        } else {
+          reduceTotalHoursBy(userInfo.id, OTHours, "totalRecallHours");
+        }
       }
     }
 
@@ -171,7 +198,7 @@ export const removeDayFromDB = async (
   }
 };
 
-async function reduceTotalHoursBy(userId: string, hours: number) {
+async function reduceTotalSickHoursBy(userId: string, hours: number) {
   try {
     const totalHoursRef = db.collection("totalSickHours").doc(userId);
     const totalHoursDoc = await totalHoursRef.get();
@@ -182,6 +209,26 @@ async function reduceTotalHoursBy(userId: string, hours: number) {
     const currentTotalHours = totalHoursDoc.data()!.totalHours || 0;
     const newTotalHours = Math.max(currentTotalHours - hours, 0); // Ensure totalHours doesn't go below 0
     await totalHoursRef.update({ totalHours: newTotalHours });
+  } catch (error) {
+    console.error("Error reducing total hours: ", error);
+    throw error;
+  }
+}
+async function reduceTotalHoursBy(
+  userId: string,
+  hours: number,
+  fieldName: string
+) {
+  try {
+    const totalHoursRef = db.collection("totalOTHours").doc(userId);
+    const totalHoursDoc = await totalHoursRef.get();
+    if (!totalHoursDoc.exists) {
+      console.warn("Total OT hours document not found.");
+      return;
+    }
+    const currentTotalHours = totalHoursDoc.data()![fieldName] || 0;
+    const newTotalHours = Math.max(currentTotalHours - hours, 0); // Ensure totalHours doesn't go below 0
+    await totalHoursRef.update({ [fieldName]: newTotalHours });
   } catch (error) {
     console.error("Error reducing total hours: ", error);
     throw error;
@@ -312,6 +359,8 @@ export const updateDeductionsInDB = async (
                 deduction.currentCPPDeduction +
                 deduction.secondCPPDeduction;
             }
+            deductions[index + 1].YTDIncome =
+              updatedGross + deduction.YTDIncome;
           }
 
           // Flip the boolean to true to now adjust every subsequent pay period's data
@@ -321,7 +370,9 @@ export const updateDeductionsInDB = async (
 
         if (foundPayDay && index < deductions.length - 1) {
           // This is the first pay period with an updated YTD value
-
+          // Update the next YTD income based off the updatedYTD in the previous step
+          deductions[index + 1].YTDIncome =
+            deduction.grossIncome + deduction.YTDIncome;
           // Check if the old deduction, when added to the new YTD, exceeds the maximum
           if (
             deduction.YTDEIDeduction + deduction.currentEIDeduction >
@@ -415,8 +466,11 @@ export const updateDeductionsInDB = async (
     let res = await db.collection("Deductions").doc(userInfo.id).update({
       deductions: updatedDeductionsArray,
     });
-    console.log(res.writeTime + " updated deductions - this is the writeTime");
-    // return the 2 deductions that could have changed if the payday they were updated in had a YTD exceed the maximum
+    console.log(
+      res.writeTime +
+        " updated deductions - this is the writeTime from updatedDeductionsInDB function"
+    );
+    // return the ei deduction that could have changed if the payday they were updated in had a YTD exceed the maximum
     return {
       eiDeduction: newEIDeduction,
     };

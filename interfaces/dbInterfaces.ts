@@ -42,6 +42,7 @@ export interface IUserDataForDB {
   nightShiftEndTime: IShiftTime;
   rotation?: string; // R1, R2 etc //
   hourlyWage: string;
+  [key: string]: any;
 }
 
 export interface ISingleDaysPayDataForClient {
