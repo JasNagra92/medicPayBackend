@@ -221,11 +221,26 @@ export function getDeductionsForYear(
         (day) => day.rotation === "R Day" || day.rotation === "R Day OT"
       );
 
+      let OTSuperStatInPeriod = workDaysInPayPeriod.filter(
+        (day) => day.OTSuperStat && day.OTSuperStat > 0
+      );
+
+      let OTSuperStat = OTSuperStatInPeriod.reduce(
+        (total: number, day: ISingleDaysPayDataForClient) =>
+          total + day.OTSuperStat!,
+        0
+      );
+
       // Calculate the current gross income
       const currentGrossIncome =
         paydayTotal +
-        (80 - (hoursWorkedInPayPeriod + OTStatReg + (RDayInPeriod ? 12 : 0))) *
-          parseFloat(userInfo?.hourlyWage!);
+        ((userInfo?.shiftPattern === "Alpha" ? 80 : 77) -
+          (hoursWorkedInPayPeriod +
+            OTStatReg +
+            OTSuperStat +
+            (RDayInPeriod ? 12 : 0))) *
+          parseFloat(userInfo?.hourlyWage!) +
+        8.29;
 
       // Calculate the current YTDIncome by adding the current gross income to the cumulative total
       const currentYTDIncome = cumulativeYTDIncome + currentGrossIncome;

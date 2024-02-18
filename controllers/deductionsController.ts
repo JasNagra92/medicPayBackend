@@ -220,15 +220,13 @@ export const getOTHours = async (req: Request, res: Response) => {
     if (doc && doc.exists) {
       let { totalOTHours, totalRecallHours, totalLateCallHours }: any =
         doc.data();
-      res
-        .status(200)
-        .send({
-          data: {
-            totalOTHours: totalOTHours ? totalOTHours : 0,
-            totalRecallHours: totalRecallHours ? totalRecallHours : 0,
-            totalLateCallHours: totalLateCallHours ? totalLateCallHours : 0,
-          },
-        });
+      res.status(200).send({
+        data: {
+          totalOTHours: totalOTHours ? totalOTHours : 0,
+          totalRecallHours: totalRecallHours ? totalRecallHours : 0,
+          totalLateCallHours: totalLateCallHours ? totalLateCallHours : 0,
+        },
+      });
     } else {
       res
         .status(200)
