@@ -276,8 +276,8 @@ export function generateSingleDaysDataForClient(
   day: IScheduleItem
 ): ISingleDaysPayDataForClient {
   const shiftStart = generateStartTimeDate(day, userInfo);
+  console.log(day);
   const shiftEnd = generateEndTimeDate(day, userInfo);
-  console.log(shiftEnd);
   let OTStatReg = 0;
   let OTSuperStat = 0;
   let baseHoursWorked =
