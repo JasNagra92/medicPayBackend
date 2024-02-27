@@ -71,8 +71,7 @@ export const getDeductions = async (
 
   let doc = await db.collection("Deductions").doc(userInfo.id).get();
   let deductions: IDeductions[] = doc.data()!.deductions;
-  console.log(payDay + " PayDay from the request");
-  console.log(deductions.map((deduction) => deduction.payDay));
+
   let foundDeduction = deductions.find(
     (deduction) => deduction.payDay === payDay
   );
