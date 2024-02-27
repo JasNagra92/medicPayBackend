@@ -30,7 +30,7 @@ export const getDeductions = async (
     OTStatReg,
     OTSuperStat,
   } = req.body;
-  console.log(userInfo);
+
   // check if the default deductions collection has already been created for this user, if not, create it
   let snapshot = await db.collection("Deductions").doc(userInfo.id).get();
   if (!snapshot.exists) {
@@ -71,6 +71,8 @@ export const getDeductions = async (
 
   let doc = await db.collection("Deductions").doc(userInfo.id).get();
   let deductions: IDeductions[] = doc.data()!.deductions;
+  console.log(payDay + " PayDay from the request");
+  console.log(deductions.map((deduction) => deduction.payDay));
   let foundDeduction = deductions.find(
     (deduction) => deduction.payDay === payDay
   );
