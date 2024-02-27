@@ -74,7 +74,9 @@ export const getDeductions = async (
   let foundDeduction = deductions.find(
     (deduction) => deduction.payDay === payDay
   );
-
+  console.log(
+    foundDeduction + " line 77 see if the deduction is found in the database"
+  );
   if (foundDeduction) {
     // scenario 1, YTD contribution less than ceiling 1
     if (foundDeduction.YTDCPPDeduction < cppCeilingOne) {
@@ -160,7 +162,8 @@ export const getDeductions = async (
     secondCPPDeduction -
     incomeTax -
     pserp;
-
+  console.log(cppDeduction + " first CPP Deduction line 163");
+  console.log(secondCPPDeduction + " second CPP Deduction line 164");
   res.status(200).send({
     data: {
       unionDues,
